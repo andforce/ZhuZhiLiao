@@ -63,7 +63,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private var ropeVertices: [MetalVertex] = []
     private var frameResourceIndex = 0
     private var stableBodyTangent = SIMD3<Float>(0, 0, 1)
-    private var wingAngles = SIMD2<Float>(repeating: 0.18)
+    private var wingAngles = SIMD2<Float>(repeating: 0.08)
     private var wingVelocities = SIMD2<Float>.zero
     private var lastEffectsTime: Float?
     private var lastRippleTime: Float = 0
@@ -409,21 +409,36 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         draw(
             mesh: bambooTube,
             modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, -0.43, 0))
-                * .scale(SIMD3<Float>(0.72, 0.86, 0.72)),
+                * .translation(SIMD3<Float>(0, -0.52, 0))
+                * .scale(SIMD3<Float>(0.60, 1.04, 0.60)),
             color: framePalette.bamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
         )
 
-        // The rope-side end is covered by a fibrous membrane. The opposite
-        // end remains open, exposing the bamboo wall and resonant cavity.
+        // A narrow lacquered collar wraps the membrane end. Giving the band
+        // real depth keeps it from reading as a loose drumhead when the toy
+        // turns edge-on.
         draw(
             mesh: cylinder,
             modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, -0.012, 0))
-                * .scale(SIMD3<Float>(0.60, 0.026, 0.60)),
+                * .translation(SIMD3<Float>(0, -0.085, 0))
+                * .scale(SIMD3<Float>(0.64, 0.17, 0.64)),
+            color: framePalette.lacquer,
+            materialKind: 3,
+            encoder: encoder,
+            viewProjection: viewProjection
+        )
+
+        // The rope-side end is covered by a fibrous membrane. It stays
+        // slightly inset so the red collar, rather than the round face,
+        // defines the silhouette.
+        draw(
+            mesh: cylinder,
+            modelMatrix: bodyFrame
+                * .translation(SIMD3<Float>(0, 0.006, 0))
+                * .scale(SIMD3<Float>(0.53, 0.020, 0.53)),
             color: membrane,
             materialKind: 6,
             encoder: encoder,
@@ -432,8 +447,9 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         draw(
             mesh: torus,
             modelMatrix: bodyFrame
+                * .translation(SIMD3<Float>(0, 0.010, 0))
                 * .rotation(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
-                * .scale(SIMD3<Float>(repeating: 0.73)),
+                * .scale(SIMD3<Float>(repeating: 0.64)),
             color: framePalette.lacquer,
             materialKind: 3,
             encoder: encoder,
@@ -442,50 +458,34 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         draw(
             mesh: sphere,
             modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, 0.018, 0))
-                * .scale(SIMD3<Float>(0.070, 0.050, 0.070)),
+                * .translation(SIMD3<Float>(0, 0.024, 0))
+                * .scale(SIMD3<Float>(0.055, 0.040, 0.055)),
             color: framePalette.cord,
             materialKind: 4,
             emissive: snapshot.state.activity * 0.18,
             encoder: encoder,
             viewProjection: viewProjection
         )
-        draw(
-            mesh: torus,
-            modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, -0.86, 0))
-                * .rotation(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
-                * .scale(SIMD3<Float>(repeating: 0.65)),
-            color: framePalette.cutBamboo,
-            materialKind: 2,
-            encoder: encoder,
-            viewProjection: viewProjection
-        )
-        draw(
-            mesh: sphere,
-            modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, -0.18, 0.39))
-                * .scale(SIMD3<Float>(0.26, 0.15, 0.16)),
-            color: framePalette.cutBamboo,
-            materialKind: 1,
-            encoder: encoder,
-            viewProjection: viewProjection
-        )
-
         for (wingIndex, sign) in [Float(-1), 1].enumerated() {
-            let eyeTransform = bodyFrame
-                * .translation(SIMD3<Float>(sign * 0.10, -0.15, 0.53))
-                * .scale(SIMD3<Float>(repeating: 0.050))
-            draw(mesh: sphere, modelMatrix: eyeTransform, color: ink, encoder: encoder, viewProjection: viewProjection)
+            let fastenerTransform = bodyFrame
+                * .translation(SIMD3<Float>(sign * 0.18, -0.13, 0.36))
+                * .scale(SIMD3<Float>(repeating: 0.072))
+            draw(
+                mesh: sphere,
+                modelMatrix: fastenerTransform,
+                color: ink,
+                encoder: encoder,
+                viewProjection: viewProjection
+            )
 
             let flap = wingAngles[wingIndex]
-            let wingRotation = simd_quatf(angle: sign * (0.28 + flap * 0.45), axis: SIMD3<Float>(0, 0, 1))
-                * simd_quatf(angle: sign * 0.09, axis: SIMD3<Float>(0, 1, 0))
-                * simd_quatf(angle: 0.10, axis: SIMD3<Float>(1, 0, 0))
+            let wingRotation = simd_quatf(angle: sign * (0.10 + flap * 0.18), axis: SIMD3<Float>(0, 0, 1))
+                * simd_quatf(angle: sign * 0.055, axis: SIMD3<Float>(0, 1, 0))
+                * simd_quatf(angle: 0.045, axis: SIMD3<Float>(1, 0, 0))
             let wingTransform = bodyFrame
-                * .translation(SIMD3<Float>(sign * 0.24, -0.40, 0.29))
+                * .translation(SIMD3<Float>(sign * 0.17, -0.54, 0.34))
                 * .rotation(wingRotation)
-                * .scale(SIMD3<Float>(0.82, 0.88, 0.28))
+                * .scale(SIMD3<Float>(0.48, 0.84, 0.20))
             encoder.setDepthStencilState(translucentDepthState)
             draw(
                 mesh: wing,
@@ -586,10 +586,10 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
 
         for wingIndex in 0..<2 {
             let sign: Float = wingIndex == 0 ? -1 : 1
-            let target = 0.18
+            let target = 0.08
                 + snapshot.state.activity
-                    * sin(snapshot.elapsedTime * 46 + sign * 0.35) * 0.32
-                + min(simd_length(snapshot.state.velocity) * 0.018, 0.28)
+                    * sin(snapshot.elapsedTime * 46 + sign * 0.35) * 0.16
+                + min(simd_length(snapshot.state.velocity) * 0.010, 0.12)
             let acceleration = (target - wingAngles[wingIndex]) * 82
                 - wingVelocities[wingIndex] * 13
             wingVelocities[wingIndex] += acceleration * deltaTime
