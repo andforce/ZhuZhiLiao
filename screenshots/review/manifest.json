@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-08-03T16:20:36Z",
+  "raw_dir": "/Users/dy/github/ZhuZhiLiao/screenshots/raw",
+  "framed_dir": "/Users/dy/github/ZhuZhiLiao/screenshots/raw",
+  "output_dir": "/Users/dy/github/ZhuZhiLiao/screenshots/review",
+  "approval_path": "/Users/dy/github/ZhuZhiLiao/screenshots/review/approved.json",
+  "summary": {
+    "total": 3,
+    "ready": 3,
+    "missing_raw": 0,
+    "invalid_size": 0,
+    "approved": 0,
+    "pending_approval": 3
+  },
+  "entries": [
+    {
+      "key": "zh-Hans|iphone69|01-安全提示",
+      "screenshot_id": "01-安全提示",
+      "locale": "zh-Hans",
+      "device": "iphone69",
+      "framed_path": "/Users/dy/github/ZhuZhiLiao/screenshots/raw/zh-Hans/iphone69/01-安全提示.png",
+      "framed_relative_path": "zh-Hans/iphone69/01-安全提示.png",
+      "raw_path": "/Users/dy/github/ZhuZhiLiao/screenshots/raw/zh-Hans/iphone69/01-安全提示.png",
+      "raw_relative_path": "zh-Hans/iphone69/01-安全提示.png",
+      "width": 1320,
+      "height": 2868,
+      "display_types": [
+        "APP_IPHONE_67",
+        "APP_IPHONE_69"
+      ],
+      "valid_app_store_size": true,
+      "status": "ready",
+      "approved": false,
+      "approval_state": "pending"
+    },
+    {
+      "key": "zh-Hans|iphone69|02-自动演示",
+      "screenshot_id": "02-自动演示",
+      "locale": "zh-Hans",
+      "device": "iphone69",
+      "framed_path": "/Users/dy/github/ZhuZhiLiao/screenshots/raw/zh-Hans/iphone69/02-自动演示.png",
+      "framed_relative_path": "zh-Hans/iphone69/02-自动演示.png",
+      "raw_path": "/Users/dy/github/ZhuZhiLiao/screenshots/raw/zh-Hans/iphone69/02-自动演示.png",
+      "raw_relative_path": "zh-Hans/iphone69/02-自动演示.png",
+      "width": 1320,
+      "height": 2868,
+      "display_types": [
+        "APP_IPHONE_67",
+        "APP_IPHONE_69"
+      ],
+      "valid_app_store_size": true,
+      "status": "ready",
+      "approved": false,
+      "approval_state": "pending"
+    },
+    {
+      "key": "zh-Hans|iphone69|03-手指控制",
+      "screenshot_id": "03-手指控制",
+      "locale": "zh-Hans",
+      "device": "iphone69",
+      "framed_path": "/Users/dy/github/ZhuZhiLiao/screenshots/raw/zh-Hans/iphone69/03-手指控制.png",
+      "framed_relative_path": "zh-Hans/iphone69/03-手指控制.png",
+      "raw_path": "/Users/dy/github/ZhuZhiLiao/screenshots/raw/zh-Hans/iphone69/03-手指控制.png",
+      "raw_relative_path": "zh-Hans/iphone69/03-手指控制.png",
+      "width": 1320,
+      "height": 2868,
+      "display_types": [
+        "APP_IPHONE_67",
+        "APP_IPHONE_69"
+      ],
+      "valid_app_store_size": true,
+      "status": "ready",
+      "approved": false,
+      "approval_state": "pending"
+    }
+  ]
+}

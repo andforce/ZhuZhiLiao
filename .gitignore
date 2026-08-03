@@ -12,6 +12,10 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
+.asc/artifacts/
+
+## macOS
+.DS_Store
 
 ## Playgrounds
 timeline.xctimeline

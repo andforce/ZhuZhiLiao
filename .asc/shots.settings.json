@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "app": {
+    "bundle_id": "com.azhegezhege.zhuzhiliao",
+    "project": "ZhuZhiLiao.xcodeproj",
+    "scheme": "ZhuZhiLiao",
+    "simulator_udid": "C1D88184-FDA4-4B85-9510-E1FD182A00ED"
+  },
+  "paths": {
+    "plan": ".asc/screenshots.json",
+    "raw_dir": "./screenshots/raw/zh-Hans/iphone69",
+    "framed_dir": "./screenshots/framed/zh-Hans/iphone69"
+  },
+  "pipeline": {
+    "frame_enabled": false,
+    "upload_enabled": true
+  },
+  "upload": {
+    "version_localization_id": "a1984893-5d67-4aea-acd0-1bd0451970aa",
+    "device_type": "IPHONE_69",
+    "source_dir": "./screenshots/raw/zh-Hans/iphone69"
+  }
+}
