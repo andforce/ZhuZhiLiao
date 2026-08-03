@@ -28,6 +28,78 @@ final class ToySimulationTests: XCTestCase {
         XCTAssertEqual(sixtyFPS.state.velocity.z, oneTwentyFPS.state.velocity.z, accuracy: 0.002)
     }
 
+    func testPointerAnchorMotionPreservesBobWorldInertia() {
+        let initial = ToyPhysicsState(
+            position: SIMD3<Float>(1, 0, 0),
+            velocity: .zero,
+            ropeLength: 2,
+            angularVelocity: .zero,
+            tension: 0,
+            activity: 0
+        )
+        var simulation = ToySimulation(
+            state: initial,
+            configuration: .inertialTesting
+        )
+        let initialWorldPosition = initial.anchorOffset + initial.position
+        let input = MotionInput(
+            anchorAcceleration: .zero,
+            gravityDirection: .zero,
+            rotationRate: .zero,
+            anchorTarget: SIMD3<Float>(0.8, 0.2, 0)
+        )
+
+        _ = simulation.advance(input: input, deltaTime: 1.0 / 60.0)
+
+        let worldPosition = simulation.state.anchorOffset + simulation.state.position
+        XCTAssertEqual(worldPosition.x, initialWorldPosition.x, accuracy: 0.000_1)
+        XCTAssertEqual(worldPosition.y, initialWorldPosition.y, accuracy: 0.000_1)
+        XCTAssertGreaterThan(simulation.state.anchorOffset.x, 0)
+        XCTAssertLessThan(simulation.state.position.x, initial.position.x)
+    }
+
+    func testPointerInputIsFrameRateIndependent() {
+        var sixtyFPS = ToySimulation(configuration: .inertialTesting)
+        var oneTwentyFPS = ToySimulation(configuration: .inertialTesting)
+        let input = MotionInput(
+            anchorAcceleration: .zero,
+            gravityDirection: .zero,
+            rotationRate: .zero,
+            anchorTarget: SIMD3<Float>(0.7, -0.25, 0.1)
+        )
+
+        for _ in 0..<60 {
+            _ = sixtyFPS.advance(input: input, deltaTime: 1.0 / 60.0)
+        }
+        for _ in 0..<120 {
+            _ = oneTwentyFPS.advance(input: input, deltaTime: 1.0 / 120.0)
+        }
+
+        XCTAssertEqual(sixtyFPS.state.anchorOffset.x, oneTwentyFPS.state.anchorOffset.x, accuracy: 0.000_1)
+        XCTAssertEqual(sixtyFPS.state.anchorOffset.y, oneTwentyFPS.state.anchorOffset.y, accuracy: 0.000_1)
+        XCTAssertEqual(sixtyFPS.state.position.x, oneTwentyFPS.state.position.x, accuracy: 0.002)
+        XCTAssertEqual(sixtyFPS.state.position.y, oneTwentyFPS.state.position.y, accuracy: 0.002)
+    }
+
+    func testWebRopeShapeMatchesReferenceSagAndEndpoints() {
+        let anchor = SIMD3<Float>(0, 0, 0)
+        let bob = SIMD3<Float>(0, -1, 0)
+        let points = WebRopeShape.points(
+            anchor: anchor,
+            bob: bob,
+            ropeLength: 2,
+            count: 5
+        )
+
+        XCTAssertEqual(points.first, anchor)
+        XCTAssertEqual(points.last, bob)
+        // 网页公式：slack * .55 * sin(pi*t) * (1 - .25*t)，t = .5。
+        XCTAssertEqual(points[2].y, -0.981_25, accuracy: 0.000_1)
+        let nearAnchorSag = -0.25 - points[1].y
+        let nearBobSag = -0.75 - points[3].y
+        XCTAssertGreaterThan(nearBobSag, nearAnchorSag)
+    }
+
     func testCrossProductDeterminesPositiveRotationDirection() {
         let initial = ToyPhysicsState(
             position: SIMD3<Float>(1, 0, 0),

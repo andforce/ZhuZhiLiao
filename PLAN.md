@@ -9,6 +9,7 @@
 - iOS 17+、iPhone only、竖屏、简体中文，Bundle ID 为 `com.azhegezhege.zhuzhiliao`。
 - 使用 `.xArbitraryZVertical`、100Hz Core Motion 更新、首帧姿态校准、三轴滤波和本地处理。
 - 使用 `1/240s` 固定步长的三维绳系质点物理；转轴和方向来自 `cross(position, velocity)`。
+- 全屏触摸（含模拟器鼠标）复刻网页杆梢追随：移动的是竹签锚点，竹筒保留惯性，绳子只拉不推。
 - 使用 MTKView 的 60/120FPS 绘制循环、深度缓冲、MSAA、程序化模型、动态绳子和粒子。
 - 使用 AVAudioPlayerNode、AVAudioUnitVarispeed 和真实 AAC 循环，根据转速驱动速度、音高和音量。
 - 使用 URLSessionWebSocketTask 复用 `/api/ws` 协议；只上传随机 UID 和计圈数，不上传动作数据。
@@ -29,4 +30,3 @@
 - 60Hz 与 120Hz 渲染下物理结果一致。
 - 网络和音频中断可恢复，断网时本地玩法不受影响。
 - 60FPS 设备帧耗时低于 16.7ms，真机无 Metal 验证错误或持续资源分配。
-

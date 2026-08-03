@@ -54,8 +54,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private var lastRippleTime: Float = 0
     private var viewportSize = SIMD2<Float>(1, 1)
 
-    private let cameraEye = SIMD3<Float>(0, 0.10, 9.25)
-    private let sceneAnchor = SIMD3<Float>(0.24, 0.72, 0)
+    private let cameraEye = ToySceneLayout.cameraEye
+    private let sceneAnchor = ToySceneLayout.initialAnchor
 
     init(coordinator: ExperienceCoordinator) {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -178,8 +178,13 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         }
 
         let snapshot = coordinator.frame(at: CACurrentMediaTime())
-        let bobPosition = sceneAnchor + snapshot.state.position
-        updateEffects(snapshot: snapshot, bobPosition: bobPosition)
+        let currentAnchor = sceneAnchor + snapshot.state.anchorOffset
+        let bobPosition = currentAnchor + snapshot.state.position
+        updateEffects(
+            snapshot: snapshot,
+            anchorPosition: currentAnchor,
+            bobPosition: bobPosition
+        )
 
         var backgroundUniforms = BackgroundUniforms(
             viewportSize: viewportSize,
@@ -199,14 +204,14 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
 
         let aspect = max(viewportSize.x / max(viewportSize.y, 1), 0.1)
         let projection = simd_float4x4.perspective(
-            fieldOfViewY: 42 * .pi / 180,
+            fieldOfViewY: ToySceneLayout.fieldOfViewY,
             aspect: aspect,
             near: 0.1,
             far: 50
         )
         let viewMatrix = simd_float4x4.lookAt(
             eye: cameraEye,
-            target: SIMD3<Float>(0, -0.15, 0),
+            target: ToySceneLayout.cameraTarget,
             up: SIMD3<Float>(0, 1, 0)
         )
         let viewProjection = projection * viewMatrix
@@ -218,12 +223,14 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         drawToy(
             encoder: encoder,
             snapshot: snapshot,
+            anchorPosition: currentAnchor,
             bobPosition: bobPosition,
             viewProjection: viewProjection
         )
         drawRope(
             encoder: encoder,
             state: snapshot.state,
+            anchorPosition: currentAnchor,
             bobPosition: bobPosition,
             vertexBuffer: ropeVertexBuffer,
             viewProjection: viewProjection
@@ -243,6 +250,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private func drawToy(
         encoder: MTLRenderCommandEncoder,
         snapshot: RenderSnapshot,
+        anchorPosition: SIMD3<Float>,
         bobPosition: SIMD3<Float>,
         viewProjection: simd_float4x4
     ) {
@@ -253,8 +261,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         let cordRed = SIMD4<Float>(0.74, 0.16, 0.075, 1)
         let ink = SIMD4<Float>(0.018, 0.014, 0.012, 1)
 
-        let shaftStart = sceneAnchor + SIMD3<Float>(0, -0.055, 0)
-        let shaftEnd = sceneAnchor + SIMD3<Float>(0, -1.55, 0)
+        let shaftStart = anchorPosition + SIMD3<Float>(0, -0.055, 0)
+        let shaftEnd = anchorPosition + SIMD3<Float>(0, -1.55, 0)
         let shaftDirection = simd_normalize(shaftEnd - shaftStart)
         draw(
             mesh: cylinder,
@@ -267,8 +275,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         draw(
             mesh: cylinder,
             modelMatrix: .segment(
-                from: sceneAnchor - shaftDirection * 0.08,
-                to: sceneAnchor + shaftDirection * 0.11,
+                from: anchorPosition - shaftDirection * 0.08,
+                to: anchorPosition + shaftDirection * 0.11,
                 radius: 0.092
             ),
             color: cordRed,
@@ -277,7 +285,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             viewProjection: viewProjection
         )
         drawSphere(
-            at: sceneAnchor - shaftDirection * 0.20,
+            at: anchorPosition - shaftDirection * 0.20,
             scale: 0.115,
             color: lacquer,
             materialKind: 3,
@@ -285,7 +293,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             viewProjection: viewProjection
         )
         drawSphere(
-            at: sceneAnchor + shaftDirection * 0.13,
+            at: anchorPosition + shaftDirection * 0.13,
             scale: 0.071,
             color: cutBamboo,
             materialKind: 1,
@@ -293,7 +301,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             viewProjection: viewProjection
         )
 
-        let towardAnchor = simd_normalize(sceneAnchor - bobPosition)
+        let towardAnchor = simd_normalize(anchorPosition - bobPosition)
         var bodyTangent = stableBodyTangent
             - towardAnchor * simd_dot(stableBodyTangent, towardAnchor)
         if simd_length_squared(bodyTangent) < 0.000_001 {
@@ -386,21 +394,19 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private func drawRope(
         encoder: MTLRenderCommandEncoder,
         state: ToyPhysicsState,
+        anchorPosition: SIMD3<Float>,
         bobPosition: SIMD3<Float>,
         vertexBuffer: MTLBuffer,
         viewProjection: simd_float4x4
     ) {
         let pointCount = 25
-        let sag = max(0, state.ropeLength - simd_length(state.position)) * 0.32
-        ropePoints.removeAll(keepingCapacity: true)
-        ropePoints.reserveCapacity(pointCount)
-
-        for index in 0..<pointCount {
-            let fraction = Float(index) / Float(pointCount - 1)
-            var point = simd_mix(sceneAnchor, bobPosition, SIMD3<Float>(repeating: fraction))
-            point.y -= sag * sin(.pi * fraction)
-            ropePoints.append(point)
-        }
+        WebRopeShape.update(
+            &ropePoints,
+            anchor: anchorPosition,
+            bob: bobPosition,
+            ropeLength: state.ropeLength,
+            count: pointCount
+        )
 
         ropeVertices.removeAll(keepingCapacity: true)
         ropeVertices.reserveCapacity(pointCount * 2)
@@ -441,11 +447,15 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         encoder.setCullMode(.back)
     }
 
-    private func updateEffects(snapshot: RenderSnapshot, bobPosition: SIMD3<Float>) {
+    private func updateEffects(
+        snapshot: RenderSnapshot,
+        anchorPosition: SIMD3<Float>,
+        bobPosition: SIMD3<Float>
+    ) {
         let deltaTime = min(max(snapshot.elapsedTime - (lastEffectsTime ?? snapshot.elapsedTime), 0), 0.05)
         lastEffectsTime = snapshot.elapsedTime
 
-        let ropeAxis = simd_normalize(sceneAnchor - bobPosition)
+        let ropeAxis = simd_normalize(anchorPosition - bobPosition)
         let tangentialVelocity = snapshot.state.velocity
             - ropeAxis * simd_dot(snapshot.state.velocity, ropeAxis)
         let tangentMagnitude = simd_length(tangentialVelocity)

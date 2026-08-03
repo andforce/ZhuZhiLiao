@@ -25,6 +25,9 @@ final class ExperienceCoordinator: ObservableObject {
     private var lastHUDPresentationTime: CFTimeInterval = 0
     private var elapsedTime: Float = 0
     private var automaticPhase: Float = 0
+    private var automaticRPS: Float = 0
+    private var pointerAnchorTarget: SIMD3<Float>?
+    private var pointerIsActive = false
     private let isRunningUnitTests: Bool
 
     init(
@@ -77,6 +80,8 @@ final class ExperienceCoordinator: ObservableObject {
     }
 
     func recalibrate() {
+        pointerAnchorTarget = nil
+        pointerIsActive = false
         motionController.resetCalibration()
         if automaticMode {
             resetSimulation(gravityDirection: SIMD3<Float>(0, -1, 0))
@@ -84,6 +89,29 @@ final class ExperienceCoordinator: ObservableObject {
         } else {
             awaitingCalibratedGravity = true
         }
+    }
+
+    /// 把 SwiftUI 触点换算到与 Metal 场景 z=0 平面相同的世界坐标。
+    /// 这使 iOS 上的手指/模拟器鼠标与网页版 pointer target 语义一致。
+    func movePointer(to location: CGPoint, in viewport: CGSize) {
+        guard viewport.width > 0, viewport.height > 0 else { return }
+
+        let visibleHeight = ToySceneLayout.visibleHeightAtToyPlane
+        let visibleWidth = visibleHeight * Float(viewport.width / viewport.height)
+        let normalizedX = Float(location.x / viewport.width) - 0.5
+        let normalizedY = 0.5 - Float(location.y / viewport.height)
+        let worldPoint = SIMD3<Float>(
+            normalizedX * visibleWidth,
+            ToySceneLayout.cameraTarget.y + normalizedY * visibleHeight,
+            0
+        )
+        pointerAnchorTarget = worldPoint - ToySceneLayout.initialAnchor
+        pointerIsActive = true
+        automaticMode = false
+    }
+
+    func endPointerInteraction() {
+        pointerIsActive = false
     }
 
     func frame(at timestamp: CFTimeInterval) -> RenderSnapshot {
@@ -133,32 +161,49 @@ final class ExperienceCoordinator: ObservableObject {
     private func stepSimulation(deltaTime: TimeInterval) {
         let clampedDeltaTime = min(max(deltaTime, 0), 0.05)
         let input: MotionInput
-        if automaticMode {
-            automaticPhase += Float(clampedDeltaTime) * 3.15 * 2 * .pi
-            let force = SIMD3<Float>(
-                cos(automaticPhase) * 0.82,
-                sin(automaticPhase) * 0.82,
-                sin(automaticPhase * 0.63) * 0.28
+        if pointerIsActive, let pointerAnchorTarget {
+            input = MotionInput(
+                anchorAcceleration: .zero,
+                gravityDirection: SIMD3<Float>(0, -1, 0),
+                rotationRate: .zero,
+                anchorTarget: pointerAnchorTarget
+            )
+            latestRotationRate = .zero
+        } else if automaticMode {
+            // 网页“自动甩”的同款输入：转速缓入到 3.4 圈/秒，杆梢沿
+            // iPhone 小屏使用网页响应式比例 0.13/0.28，由模拟器内部再做
+            // 26/s 平滑；桌面网页达到上限后才会收敛到 58/150。
+            let delta = Float(clampedDeltaTime)
+            automaticRPS += (3.4 - automaticRPS) * min(1, delta * 1.1)
+            automaticPhase += automaticRPS * delta * 2 * .pi
+            let radius = simulation.state.ropeLength * (Float(13) / Float(28))
+            let target = SIMD3<Float>(
+                cos(automaticPhase) * radius,
+                sin(automaticPhase) * radius,
+                0
             )
             input = MotionInput(
-                anchorAcceleration: force,
+                anchorAcceleration: .zero,
                 gravityDirection: SIMD3<Float>(0, -1, 0),
-                rotationRate: SIMD3<Float>(0, 0, 0.08)
+                rotationRate: .zero,
+                anchorTarget: target
             )
             latestRotationRate = input.rotationRate
         } else {
             let sample = motionController.latestSample()
-            guard sample.isAvailable else { return }
-            if awaitingCalibratedGravity {
+            if sample.isAvailable, awaitingCalibratedGravity {
                 resetSimulation(gravityDirection: sample.gravityDirection)
                 awaitingCalibratedGravity = false
             }
             input = MotionInput(
-                anchorAcceleration: sample.userAcceleration,
-                gravityDirection: sample.gravityDirection,
-                rotationRate: sample.rotationRate
+                anchorAcceleration: sample.isAvailable ? sample.userAcceleration : .zero,
+                gravityDirection: sample.isAvailable
+                    ? sample.gravityDirection
+                    : SIMD3<Float>(0, -1, 0),
+                rotationRate: sample.isAvailable ? sample.rotationRate : .zero,
+                anchorTarget: pointerAnchorTarget
             )
-            latestRotationRate = sample.rotationRate
+            latestRotationRate = input.rotationRate
         }
 
         let frame = simulation.advance(input: input, deltaTime: clampedDeltaTime)
@@ -184,6 +229,7 @@ final class ExperienceCoordinator: ObservableObject {
         )
         latestRotationRate = .zero
         pendingRenderedWahs = 0
+        automaticRPS = 0
         hapticFeedback.reset()
     }
 }

@@ -13,8 +13,23 @@ struct ContentView: View {
             if isRunningUnitTests {
                 Color.clear
             } else {
-                MetalSurface(coordinator: coordinator)
-                    .ignoresSafeArea()
+                GeometryReader { proxy in
+                    MetalSurface(coordinator: coordinator)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                                .onChanged { value in
+                                    coordinator.movePointer(
+                                        to: value.location,
+                                        in: proxy.size
+                                    )
+                                }
+                                .onEnded { _ in
+                                    coordinator.endPointerInteraction()
+                                }
+                        )
+                }
+                .ignoresSafeArea()
             }
 
             readabilityScrim
@@ -164,13 +179,13 @@ struct ContentView: View {
     }
 
     private var instructionTitle: String {
-        return coordinator.motionIsAvailable ? "以手肘为轴，让前臂画小圆" : "动作传感器不可用"
+        coordinator.motionIsAvailable
+            ? "按住画圈，或握住手机转动"
+            : "按住屏幕画圈"
     }
 
     private var instructionDetail: String {
-        return coordinator.motionIsAvailable
-            ? "沿同一方向连续转动 · 顺时针或逆时针均可"
-            : "当前设备将自动播放转动效果"
+        "沿同一方向连续转动 · 转得越快叫得越响"
     }
 
     private var statistics: some View {
