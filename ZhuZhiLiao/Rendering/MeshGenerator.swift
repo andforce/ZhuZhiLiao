@@ -9,11 +9,17 @@ struct MetalVertex {
     init(
         position: SIMD3<Float>,
         normal: SIMD3<Float>,
-        textureCoordinate: SIMD2<Float> = .zero
+        textureCoordinate: SIMD2<Float> = .zero,
+        surfaceKind: Float = 0
     ) {
         self.position = SIMD4<Float>(position, 1)
         self.normal = SIMD4<Float>(normal, 0)
-        self.textureCoordinate = SIMD4<Float>(textureCoordinate.x, textureCoordinate.y, 0, 0)
+        self.textureCoordinate = SIMD4<Float>(
+            textureCoordinate.x,
+            textureCoordinate.y,
+            surfaceKind,
+            0
+        )
     }
 }
 
@@ -116,10 +122,130 @@ enum MeshGenerator {
         return MetalMesh(device: device, vertices: vertices, indices: indices)
     }
 
+    /// A subtly tapered bamboo tube with real wall thickness. `surfaceKind`
+    /// distinguishes the outer wall (0), dark inner wall (1), and cut rims (2)
+    /// so one draw call can still shade the three surfaces independently.
+    static func hollowTube(
+        device: MTLDevice,
+        bottomRadius: Float = 0.45,
+        topRadius: Float = 0.50,
+        wallThickness: Float = 0.095,
+        segments: Int = 48
+    ) -> MetalMesh {
+        var vertices: [MetalVertex] = []
+        var indices: [UInt16] = []
+        let outerSlope = topRadius - bottomRadius
+        let innerBottomRadius = max(bottomRadius - wallThickness, 0.05)
+        let innerTopRadius = max(topRadius - wallThickness, 0.05)
+        let innerSlope = innerTopRadius - innerBottomRadius
+
+        // Outer and inner cylindrical walls.
+        for segment in 0...segments {
+            let fraction = Float(segment) / Float(segments)
+            let angle = fraction * 2 * Float.pi
+            let radial = SIMD3<Float>(cos(angle), 0, sin(angle))
+            let outerNormal = simd_normalize(SIMD3<Float>(
+                radial.x,
+                -outerSlope,
+                radial.z
+            ))
+            let innerNormal = -simd_normalize(SIMD3<Float>(
+                radial.x,
+                -innerSlope,
+                radial.z
+            ))
+
+            vertices.append(MetalVertex(
+                position: SIMD3<Float>(
+                    radial.x * bottomRadius,
+                    -0.5,
+                    radial.z * bottomRadius
+                ),
+                normal: outerNormal,
+                textureCoordinate: SIMD2<Float>(fraction, 0)
+            ))
+            vertices.append(MetalVertex(
+                position: SIMD3<Float>(
+                    radial.x * topRadius,
+                    0.5,
+                    radial.z * topRadius
+                ),
+                normal: outerNormal,
+                textureCoordinate: SIMD2<Float>(fraction, 1)
+            ))
+            vertices.append(MetalVertex(
+                position: SIMD3<Float>(
+                    radial.x * innerBottomRadius,
+                    -0.5,
+                    radial.z * innerBottomRadius
+                ),
+                normal: innerNormal,
+                textureCoordinate: SIMD2<Float>(fraction, 0),
+                surfaceKind: 1
+            ))
+            vertices.append(MetalVertex(
+                position: SIMD3<Float>(
+                    radial.x * innerTopRadius,
+                    0.5,
+                    radial.z * innerTopRadius
+                ),
+                normal: innerNormal,
+                textureCoordinate: SIMD2<Float>(fraction, 1),
+                surfaceKind: 1
+            ))
+        }
+
+        for segment in 0..<segments {
+            let base = UInt16(segment * 4)
+            let next = base + 4
+            indices += [base, base + 1, next, base + 1, next + 1, next]
+            indices += [base + 2, next + 2, base + 3, base + 3, next + 2, next + 3]
+        }
+
+        // The exposed annular cuts make the open end read as a bamboo tube
+        // instead of a paper-thin shell.
+        let rims: [(Float, Float, Float, SIMD3<Float>, Bool)] = [
+            (-0.5, bottomRadius, innerBottomRadius, SIMD3<Float>(0, -1, 0), false),
+            (0.5, topRadius, innerTopRadius, SIMD3<Float>(0, 1, 0), true)
+        ]
+        for (y, outerRadius, innerRadius, normal, reverse) in rims {
+            let rimStart = UInt16(vertices.count)
+            for segment in 0...segments {
+                let fraction = Float(segment) / Float(segments)
+                let angle = fraction * 2 * Float.pi
+                let radial = SIMD3<Float>(cos(angle), 0, sin(angle))
+                vertices.append(MetalVertex(
+                    position: SIMD3<Float>(radial.x * outerRadius, y, radial.z * outerRadius),
+                    normal: normal,
+                    textureCoordinate: SIMD2<Float>((cos(angle) + 1) * 0.5, (sin(angle) + 1) * 0.5),
+                    surfaceKind: 2
+                ))
+                vertices.append(MetalVertex(
+                    position: SIMD3<Float>(radial.x * innerRadius, y, radial.z * innerRadius),
+                    normal: normal,
+                    textureCoordinate: SIMD2<Float>((cos(angle) + 1) * 0.5, (sin(angle) + 1) * 0.5),
+                    surfaceKind: 2
+                ))
+            }
+
+            for segment in 0..<segments {
+                let outer = rimStart + UInt16(segment * 2)
+                let inner = outer + 1
+                let nextOuter = outer + 2
+                let nextInner = outer + 3
+                indices += reverse
+                    ? [outer, nextOuter, inner, inner, nextOuter, nextInner]
+                    : [outer, inner, nextOuter, inner, nextInner, nextOuter]
+            }
+        }
+
+        return MetalMesh(device: device, vertices: vertices, indices: indices)
+    }
+
     static func wing(
         device: MTLDevice,
-        lengthSegments: Int = 14,
-        widthSegments: Int = 8
+        lengthSegments: Int = 24,
+        widthSegments: Int = 12
     ) -> MetalMesh {
         var vertices: [MetalVertex] = []
         var indices: [UInt16] = []
@@ -129,21 +255,24 @@ enum MeshGenerator {
             let surfaceSign: Float = surface == 0 ? 1 : -1
             for lengthIndex in 0...lengthSegments {
                 let v = Float(lengthIndex) / Float(lengthSegments)
-                let envelope = pow(max(sin(.pi * v), 0), 0.72) * (1 - v * 0.18)
+                let leafProgress = pow(v, 0.88)
+                let envelope = pow(max(sin(.pi * leafProgress), 0), 0.64)
+                    * (0.92 - v * 0.12)
                 for widthIndex in 0...widthSegments {
                     let u = Float(widthIndex) / Float(widthSegments)
                     let across = u * 2 - 1
-                    let width = envelope * 0.5
-                    let arch = sin(.pi * v) * (1 - across * across) * 0.055
-                    let thickness = surfaceSign * 0.025 * max(envelope, 0.15)
+                    let asymmetricWidth: Float = across < 0 ? 0.47 : 0.55
+                    let width = envelope * asymmetricWidth
+                    let arch = sin(.pi * v) * (1 - across * across) * 0.072
+                    let thickness = surfaceSign * 0.012 * max(envelope, 0.12)
                     let normal = simd_normalize(SIMD3<Float>(
-                        -across * 0.16,
-                        (v - 0.5) * 0.08,
+                        -across * 0.20,
+                        (v - 0.48) * 0.10,
                         surfaceSign
                     ))
                     vertices.append(MetalVertex(
                         position: SIMD3<Float>(
-                            across * width,
+                            across * width + sin(.pi * v) * 0.025,
                             0.5 - v,
                             arch + thickness
                         ),

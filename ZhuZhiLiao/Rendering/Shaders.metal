@@ -138,7 +138,7 @@ struct LitVertexOut {
     float4 position [[position]];
     float3 worldPosition;
     float3 normal;
-    float2 textureCoordinate;
+    float3 textureCoordinate;
 };
 
 vertex LitVertexOut litVertex(
@@ -152,7 +152,7 @@ vertex LitVertexOut litVertex(
     output.position = uniforms.viewProjectionMatrix * worldPosition;
     output.worldPosition = worldPosition.xyz;
     output.normal = normalize((uniforms.normalMatrix * currentVertex.normal).xyz);
-    output.textureCoordinate = currentVertex.textureCoordinate.xy;
+    output.textureCoordinate = currentVertex.textureCoordinate.xyz;
     return output;
 }
 
@@ -171,29 +171,62 @@ fragment float4 litFragment(
 
     float3 base = uniforms.baseColor.rgb;
     float materialKind = uniforms.materialParameters.x;
+    float2 uv = input.textureCoordinate.xy;
+    float surfaceKind = input.textureCoordinate.z;
     float roughness = 0.78;
     if (materialKind > 0.5 && materialKind < 1.5) {
-        float streak = sin(input.textureCoordinate.x * 190.0 + sin(input.textureCoordinate.y * 17.0) * 2.2);
-        float broad = sin(input.textureCoordinate.x * 28.0 + input.textureCoordinate.y * 5.0 + 0.8);
-        float node = smoothstep(0.94, 1.0, sin(input.textureCoordinate.y * 34.0) * 0.5 + 0.5);
-        base *= 0.90 + streak * 0.026 + broad * 0.060 - node * 0.06;
-        roughness = 0.86;
+        float fineFiber = sin(uv.x * 238.0 + sin(uv.y * 15.0) * 2.4);
+        float broadFiber = sin(uv.x * 31.0 + uv.y * 5.0 + 0.8);
+        float mottling = sin(uv.y * 11.0 + sin(uv.x * 19.0)) * 0.5 + 0.5;
+        base *= 0.91 + fineFiber * 0.022 + broadFiber * 0.055 + mottling * 0.025;
+        roughness = 0.88;
+
+        if (surfaceKind > 0.5 && surfaceKind < 1.5) {
+            // The cavity stays readable under moonlight without looking like
+            // a flat black cap.
+            base *= 0.34 + mottling * 0.10;
+            roughness = 0.96;
+        } else if (surfaceKind > 1.5) {
+            float2 centered = uv - 0.5;
+            float ray = sin(atan2(centered.y, centered.x) * 44.0 + length(centered) * 38.0);
+            float growthRing = sin(length(centered) * 112.0);
+            base *= 1.08 + ray * 0.025 + growthRing * 0.018;
+            roughness = 0.94;
+        }
     } else if (materialKind > 1.5 && materialKind < 2.5) {
-        float2 centered = input.textureCoordinate - 0.5;
+        float2 centered = uv - 0.5;
         float radialFiber = sin(atan2(centered.y, centered.x) * 38.0 + length(centered) * 90.0);
-        base *= 0.97 + radialFiber * 0.007;
+        float growthRing = sin(length(centered) * 118.0 + radialFiber * 0.3);
+        base *= 0.98 + radialFiber * 0.018 + growthRing * 0.012;
         roughness = 0.93;
     } else if (materialKind > 2.5 && materialKind < 3.5) {
-        float lacquerVariation = sin(input.textureCoordinate.x * 17.0) * 0.018;
+        float lacquerVariation = sin(uv.x * 17.0) * 0.018;
         base += lacquerVariation;
         roughness = 0.28;
+    } else if (materialKind > 3.5 && materialKind < 4.5) {
+        float twist = sin((uv.x * 33.0 + uv.y * 19.0) * 2.0 * M_PI_F);
+        base *= 0.88 + twist * 0.055;
+        roughness = 0.82;
     } else if (materialKind > 4.5 && materialKind < 5.5) {
-        float centerVein = 1.0 - smoothstep(0.018, 0.050, abs(input.textureCoordinate.x - 0.5));
-        float sideVeins = 1.0 - smoothstep(0.018, 0.055, abs(fract(input.textureCoordinate.y * 5.0) - 0.5));
-        float veinMask = max(centerVein * 0.7, sideVeins * 0.12);
-        base *= 0.92 + sin(input.textureCoordinate.y * 24.0) * 0.025;
-        base = mix(base, base * 0.64, veinMask);
+        float across = abs(uv.x - 0.5);
+        float centerVein = 1.0 - smoothstep(0.016, 0.043, across);
+        float branchCoordinate = uv.y * 5.8 + across * 1.42;
+        float branchDistance = min(fract(branchCoordinate), 1.0 - fract(branchCoordinate));
+        float sideVeins = (1.0 - smoothstep(0.018, 0.060, branchDistance))
+            * smoothstep(0.055, 0.17, across);
+        float edgeFiber = smoothstep(0.435, 0.495, across);
+        float veinMask = max(centerVein * 0.82, max(sideVeins * 0.38, edgeFiber * 0.34));
+        base *= 0.94 + sin(uv.y * 28.0 + uv.x * 3.0) * 0.025;
+        base = mix(base, base * 0.58, veinMask);
         roughness = 0.90;
+    } else if (materialKind > 5.5 && materialKind < 6.5) {
+        float2 centered = uv - 0.5;
+        float radialTension = sin(atan2(centered.y, centered.x) * 52.0 + length(centered) * 15.0);
+        float paperFiber = sin(uv.x * 153.0 + sin(uv.y * 71.0) * 1.8)
+            + sin(uv.y * 197.0 + uv.x * 8.0) * 0.55;
+        float edgeAge = smoothstep(0.32, 0.50, length(centered));
+        base *= 0.96 + radialTension * 0.012 + paperFiber * 0.012 - edgeAge * 0.075;
+        roughness = 0.98;
     }
 
     float specularPower = mix(10.0, 74.0, 1.0 - roughness);
