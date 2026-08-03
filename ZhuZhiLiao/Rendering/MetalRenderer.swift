@@ -29,6 +29,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private let commandQueue: MTLCommandQueue
     private let backgroundPipeline: MTLRenderPipelineState
     private let litPipeline: MTLRenderPipelineState
+    private let backgroundDepthState: MTLDepthStencilState
     private let depthState: MTLDepthStencilState
     private let translucentDepthState: MTLDepthStencilState
     private let cylinder: MetalMesh
@@ -103,6 +104,11 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         } catch {
             fatalError("Metal 管线创建失败：\(error.localizedDescription)")
         }
+
+        let backgroundDepthDescriptor = MTLDepthStencilDescriptor()
+        backgroundDepthDescriptor.depthCompareFunction = .always
+        backgroundDepthDescriptor.isDepthWriteEnabled = false
+        backgroundDepthState = device.makeDepthStencilState(descriptor: backgroundDepthDescriptor)!
 
         let depthDescriptor = MTLDepthStencilDescriptor()
         depthDescriptor.depthCompareFunction = .less
@@ -182,7 +188,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         )
         encoder.pushDebugGroup("水墨夜景")
         encoder.setRenderPipelineState(backgroundPipeline)
-        encoder.setDepthStencilState(nil)
+        encoder.setDepthStencilState(backgroundDepthState)
         encoder.setFragmentBytes(
             &backgroundUniforms,
             length: MemoryLayout<BackgroundUniforms>.stride,
