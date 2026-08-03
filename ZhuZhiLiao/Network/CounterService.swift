@@ -3,40 +3,31 @@ import Foundation
 @MainActor
 final class CounterService {
     private enum DefaultsKey {
-        static let userID = "zzl_uid"
+        static let legacyUserID = "zzl_uid"
         static let personalWahs = "zzl_mywah"
         static let pendingWahs = "zzl_pending_wah"
     }
 
-    private let endpoint = URL(string: "wss://zhuzhiliao.imsai.cc/api/ws")!
+    private let endpoint = URL(string: "wss://zhuzhiliao.aimfor.top/api/ws")!
     private let defaults: UserDefaults
     private let session: URLSession
-    private let userID: String
 
     private var webSocket: URLSessionWebSocketTask?
     private var connectionTask: Task<Void, Never>?
     private var flushTask: Task<Void, Never>?
     private var heartbeatTask: Task<Void, Never>?
     private var reconnectAttempt = 0
-    private var hasCountedVisit = false
     private var isStarted = false
     private var outbox: WahOutbox
 
-    private(set) var stats = CounterStats(online: 0, visitors: 0, visits: 0, wahs: 0)
+    private(set) var stats = CounterStats(online: 0, wahs: 0)
     private(set) var personalWahs: Int
 
     init(defaults: UserDefaults = .standard, session: URLSession = .shared) {
         self.defaults = defaults
         self.session = session
 
-        if let savedID = defaults.string(forKey: DefaultsKey.userID), !savedID.isEmpty {
-            userID = savedID
-        } else {
-            let newID = UUID().uuidString.lowercased()
-            userID = newID
-            defaults.set(newID, forKey: DefaultsKey.userID)
-        }
-
+        defaults.removeObject(forKey: DefaultsKey.legacyUserID)
         personalWahs = defaults.integer(forKey: DefaultsKey.personalWahs)
         outbox = WahOutbox(pending: defaults.integer(forKey: DefaultsKey.pendingWahs))
     }
@@ -93,18 +84,8 @@ final class CounterService {
 
         connectionTask = Task { [weak self, socket] in
             guard let self else { return }
-            do {
-                let hello = try CounterCodec.hello(
-                    userID: self.userID,
-                    countsVisit: !self.hasCountedVisit
-                )
-                try await socket.send(.string(hello))
-                self.hasCountedVisit = true
-                self.reconnectAttempt = 0
-                await self.receiveMessages(from: socket)
-            } catch {
-                self.handleDisconnect(socket)
-            }
+            self.reconnectAttempt = 0
+            await self.receiveMessages(from: socket)
         }
     }
 
