@@ -24,6 +24,7 @@ final class MotionController {
     private let manager = CMMotionManager()
     private var referenceAttitude: simd_quatf?
     private var accelerationFilter = MotionSampleFilter()
+    private var elbowPivotFilter = ElbowPivotMotionFilter()
 
     private(set) var isRunning = false
 
@@ -53,6 +54,7 @@ final class MotionController {
     func resetCalibration() {
         referenceAttitude = nil
         accelerationFilter.reset()
+        elbowPivotFilter.reset()
     }
 
     func latestSample() -> MotionSample {
@@ -69,15 +71,23 @@ final class MotionController {
         // Core Motion 的向量位于当前设备坐标。先回到参考坐标，再旋转到
         // 启动时的屏幕坐标，使 x/y/z 始终表示首帧的右/上/出屏方向。
         let deviceToCalibratedScene = simd_normalize(referenceAttitude * attitude.inverse)
-        let acceleration = deviceToCalibratedScene.act(motion.userAcceleration.simdVector)
+        let measuredAcceleration = deviceToCalibratedScene.act(motion.userAcceleration.simdVector)
         let gravity = deviceToCalibratedScene.act(motion.gravity.simdVector)
         let rotationRate = deviceToCalibratedScene.act(motion.rotationRate.simdVector)
+        let pivotToPhoneDirection = deviceToCalibratedScene.act(SIMD3<Float>(0, 1, 0))
+        let filteredAcceleration = accelerationFilter.process(
+            measuredAcceleration,
+            timestamp: motion.timestamp
+        )
+        let assistedAcceleration = elbowPivotFilter.process(
+            measuredAcceleration: filteredAcceleration,
+            rotationRate: rotationRate,
+            pivotToPhoneDirection: pivotToPhoneDirection,
+            timestamp: motion.timestamp
+        )
 
         return MotionSample(
-            userAcceleration: accelerationFilter.process(
-                acceleration,
-                timestamp: motion.timestamp
-            ),
+            userAcceleration: assistedAcceleration,
             gravityDirection: gravity,
             rotationRate: rotationRate,
             relativeAttitude: deviceToCalibratedScene,

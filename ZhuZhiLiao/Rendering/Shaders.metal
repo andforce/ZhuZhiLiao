@@ -38,8 +38,17 @@ float segmentDistance(float2 point, float2 start, float2 end) {
     return length(point - (start + segment * position));
 }
 
-float bambooStroke(float2 point, float2 start, float2 end, float width) {
-    return 1.0 - smoothstep(width, width + 0.004, segmentDistance(point, start, end));
+float softStroke(float2 point, float2 start, float2 end, float width, float aspect) {
+    float2 scale = float2(aspect, 1.0);
+    return 1.0 - smoothstep(
+        width,
+        width + 0.004,
+        segmentDistance(point * scale, start * scale, end * scale)
+    );
+}
+
+float aspectDistance(float2 point, float2 center, float aspect) {
+    return length((point - center) * float2(aspect, 1.0));
 }
 
 fragment float4 backgroundFragment(
@@ -47,50 +56,67 @@ fragment float4 backgroundFragment(
     constant BackgroundUniforms &uniforms [[buffer(0)]]
 ) {
     float2 uv = float2(input.uv.x, 1.0 - input.uv.y);
-    float3 top = float3(0.035, 0.055, 0.145);
-    float3 middle = float3(0.085, 0.115, 0.265);
-    float3 bottom = float3(0.255, 0.185, 0.315);
-    float3 color = mix(top, middle, smoothstep(0.0, 0.58, uv.y));
-    color = mix(color, bottom, smoothstep(0.60, 1.0, uv.y));
+    float aspect = max(uniforms.viewportSize.x / max(uniforms.viewportSize.y, 1.0), 0.1);
+    float3 zenith = float3(0.014, 0.024, 0.064);
+    float3 indigo = float3(0.034, 0.056, 0.126);
+    float3 dusk = float3(0.090, 0.078, 0.132);
+    float3 color = mix(zenith, indigo, smoothstep(0.0, 0.62, uv.y));
+    color = mix(color, dusk, smoothstep(0.66, 1.02, uv.y) * 0.84);
 
-    float2 starCell = floor(uv * float2(38.0, 82.0));
-    float starRandom = hash21(starCell);
-    float2 starCenter = (starCell + float2(hash21(starCell + 2.3), hash21(starCell + 7.7)))
-        / float2(38.0, 82.0);
-    float starDistance = distance(uv, starCenter);
-    float star = (1.0 - smoothstep(0.001, 0.004, starDistance))
-        * step(0.82, starRandom)
-        * (0.35 + 0.65 * sin(uniforms.time * (0.7 + starRandom) + starRandom * 18.0) * 0.5 + 0.35);
-    color += float3(0.85, 0.78, 0.62) * star;
+    float haze = exp(-pow((uv.y - 0.73) * 4.5, 2.0));
+    color += float3(0.050, 0.044, 0.065) * haze * 0.20;
 
-    float moonDistance = distance(uv, float2(0.78, 0.18));
-    float moonGlow = 1.0 - smoothstep(0.035, 0.15, moonDistance);
-    float moon = 1.0 - smoothstep(0.055, 0.061, moonDistance);
-    color += float3(0.38, 0.34, 0.27) * moonGlow * 0.28;
-    color = mix(color, float3(0.94, 0.88, 0.72), moon * 0.92);
-    float crater = (1.0 - smoothstep(0.008, 0.015, distance(uv, float2(0.765, 0.189))))
-        + (1.0 - smoothstep(0.006, 0.012, distance(uv, float2(0.795, 0.162))));
-    color = mix(color, float3(0.67, 0.62, 0.53), clamp(crater * moon * 0.33, 0.0, 1.0));
+    float moonDistance = aspectDistance(uv, float2(0.82, 0.19), aspect);
+    float moonGlow = 1.0 - smoothstep(0.045, 0.16, moonDistance);
+    float moon = 1.0 - smoothstep(0.044, 0.050, moonDistance);
+    color += float3(0.48, 0.40, 0.25) * moonGlow * 0.15;
+    color = mix(color, float3(0.90, 0.84, 0.67), moon * 0.94);
+    float crater = 1.0 - smoothstep(
+        0.006,
+        0.013,
+        aspectDistance(uv, float2(0.806, 0.201), aspect)
+    );
+    crater += (1.0 - smoothstep(
+        0.004,
+        0.010,
+        aspectDistance(uv, float2(0.833, 0.174), aspect)
+    )) * 0.62;
+    color = mix(color, float3(0.63, 0.59, 0.49), clamp(crater * moon * 0.18, 0.0, 1.0));
 
-    float bamboo = 0.0;
-    bamboo += bambooStroke(uv, float2(0.045, 1.05), float2(0.070, -0.05), 0.016);
-    bamboo += bambooStroke(uv, float2(0.20, 1.02), float2(0.145, 0.10), 0.010);
-    bamboo += bambooStroke(uv, float2(0.07, 0.68), float2(0.25, 0.55), 0.008);
-    bamboo += bambooStroke(uv, float2(0.16, 0.48), float2(0.02, 0.38), 0.007);
-    bamboo += bambooStroke(uv, float2(0.95, 1.05), float2(0.92, -0.05), 0.013);
-    bamboo += bambooStroke(uv, float2(0.92, 0.62), float2(0.78, 0.50), 0.007);
-    bamboo += bambooStroke(uv, float2(0.94, 0.35), float2(0.82, 0.27), 0.006);
-    bamboo = clamp(bamboo, 0.0, 1.0);
-    color = mix(color, float3(0.015, 0.020, 0.055), bamboo * 0.88);
+    float2 snowCell = floor(uv * float2(22.0, 42.0));
+    float snowRandom = hash21(snowCell + 4.2);
+    float2 snowCenter = (snowCell + float2(
+        hash21(snowCell + 7.3),
+        hash21(snowCell + 12.7)
+    )) / float2(22.0, 42.0);
+    float snowDistance = aspectDistance(uv, snowCenter, aspect);
+    float snow = (1.0 - smoothstep(0.0010, 0.0026, snowDistance))
+        * step(0.94, snowRandom);
+    float twinkle = 0.74 + sin(uniforms.time * 0.42 + snowRandom * 11.0) * 0.08;
+    color += float3(0.88, 0.86, 0.77) * snow * twinkle;
 
-    float horizonGlow = exp(-pow((uv.y - 1.03) * 2.2, 2.0));
-    color += float3(0.24, 0.09, 0.045) * horizonGlow * 0.28;
+    float branches = 0.0;
+    branches += softStroke(uv, float2(-0.02, 1.06), float2(0.060, 0.42), 0.012, aspect);
+    branches += softStroke(uv, float2(0.052, 0.68), float2(0.18, 0.58), 0.007, aspect);
+    branches += softStroke(uv, float2(0.020, 0.82), float2(-0.045, 0.75), 0.005, aspect);
+    branches += softStroke(uv, float2(1.03, 1.06), float2(0.955, 0.44), 0.011, aspect);
+    branches += softStroke(uv, float2(0.973, 0.69), float2(0.86, 0.59), 0.006, aspect);
+    branches += softStroke(uv, float2(0.985, 0.84), float2(1.055, 0.76), 0.005, aspect);
+    color = mix(color, float3(0.007, 0.011, 0.028), clamp(branches, 0.0, 1.0) * 0.82);
 
-    float vignette = smoothstep(0.88, 0.25, distance(uv, float2(0.5, 0.47)));
-    color *= 0.58 + vignette * 0.52;
-    float grain = hash21(uv * uniforms.viewportSize + floor(uniforms.time * 12.0)) - 0.5;
-    color += grain * 0.018;
-    color += float3(0.11, 0.035, 0.015) * uniforms.activity * 0.08;
+    float activityGlow = 1.0 - smoothstep(
+        0.03,
+        0.34,
+        aspectDistance(uv, float2(0.50, 0.50), aspect)
+    );
+    color += float3(0.15, 0.055, 0.016) * uniforms.activity * activityGlow * 0.26;
+
+    float horizonGlow = exp(-pow((uv.y - 1.04) * 2.4, 2.0));
+    color += float3(0.17, 0.050, 0.025) * horizonGlow * 0.16;
+    float vignette = smoothstep(0.78, 0.20, aspectDistance(uv, float2(0.5, 0.48), aspect));
+    color *= 0.70 + vignette * 0.34;
+    float grain = hash21(floor(uv * uniforms.viewportSize) * 0.73) - 0.5;
+    color += grain * 0.009;
     return float4(color, 1.0);
 }
 
@@ -136,24 +162,50 @@ fragment float4 litFragment(
 ) {
     float3 normal = normalize(input.normal);
     float3 moonDirection = normalize(float3(0.55, 0.78, 0.60));
-    float3 rimDirection = normalize(float3(-0.65, 0.20, -0.72));
+    float3 warmDirection = normalize(float3(-0.62, 0.18, 0.74));
+    float3 viewDirection = normalize(float3(0.0, 0.04, 1.0));
+    float3 halfDirection = normalize(moonDirection + viewDirection);
     float diffuse = max(dot(normal, moonDirection), 0.0);
-    float rim = pow(1.0 - max(dot(normal, normalize(float3(0.0, 0.05, 1.0))), 0.0), 2.4);
-    float warm = max(dot(normal, rimDirection), 0.0);
+    float rim = pow(1.0 - max(dot(normal, viewDirection), 0.0), 2.7);
+    float warm = max(dot(normal, warmDirection), 0.0);
 
     float3 base = uniforms.baseColor.rgb;
     float materialKind = uniforms.materialParameters.x;
+    float roughness = 0.78;
     if (materialKind > 0.5 && materialKind < 1.5) {
-        float streak = sin(input.textureCoordinate.x * 230.0 + sin(input.textureCoordinate.y * 13.0) * 2.0);
-        float broad = sin(input.textureCoordinate.x * 34.0 + 0.8);
-        base *= 0.91 + streak * 0.035 + broad * 0.055;
+        float streak = sin(input.textureCoordinate.x * 190.0 + sin(input.textureCoordinate.y * 17.0) * 2.2);
+        float broad = sin(input.textureCoordinate.x * 28.0 + input.textureCoordinate.y * 5.0 + 0.8);
+        float node = smoothstep(0.94, 1.0, sin(input.textureCoordinate.y * 34.0) * 0.5 + 0.5);
+        base *= 0.90 + streak * 0.026 + broad * 0.060 - node * 0.06;
+        roughness = 0.86;
+    } else if (materialKind > 1.5 && materialKind < 2.5) {
+        float2 centered = input.textureCoordinate - 0.5;
+        float radialFiber = sin(atan2(centered.y, centered.x) * 38.0 + length(centered) * 90.0);
+        base *= 0.97 + radialFiber * 0.007;
+        roughness = 0.93;
+    } else if (materialKind > 2.5 && materialKind < 3.5) {
+        float lacquerVariation = sin(input.textureCoordinate.x * 17.0) * 0.018;
+        base += lacquerVariation;
+        roughness = 0.28;
+    } else if (materialKind > 4.5 && materialKind < 5.5) {
+        float centerVein = 1.0 - smoothstep(0.018, 0.050, abs(input.textureCoordinate.x - 0.5));
+        float sideVeins = 1.0 - smoothstep(0.018, 0.055, abs(fract(input.textureCoordinate.y * 5.0) - 0.5));
+        float veinMask = max(centerVein * 0.7, sideVeins * 0.12);
+        base *= 0.92 + sin(input.textureCoordinate.y * 24.0) * 0.025;
+        base = mix(base, base * 0.64, veinMask);
+        roughness = 0.90;
     }
 
-    float3 lighting = float3(0.30, 0.32, 0.45)
-        + float3(1.0, 0.91, 0.75) * diffuse * 0.92
-        + float3(1.0, 0.44, 0.20) * warm * 0.18
-        + float3(0.42, 0.48, 0.88) * rim * 0.24;
+    float specularPower = mix(10.0, 74.0, 1.0 - roughness);
+    float specular = pow(max(dot(normal, halfDirection), 0.0), specularPower)
+        * mix(0.03, 0.42, 1.0 - roughness);
+    float3 lighting = float3(0.23, 0.25, 0.34)
+        + float3(1.0, 0.90, 0.70) * diffuse * 0.94
+        + float3(0.96, 0.46, 0.22) * warm * 0.15
+        + float3(0.34, 0.40, 0.72) * rim * 0.18;
     float emissive = uniforms.materialParameters.y;
-    float3 color = base * lighting + base * emissive * float3(1.35, 0.72, 0.32);
+    float3 color = base * lighting
+        + float3(1.0, 0.86, 0.65) * specular
+        + base * emissive * float3(1.24, 0.68, 0.30);
     return float4(color, uniforms.baseColor.a);
 }

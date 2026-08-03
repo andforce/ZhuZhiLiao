@@ -39,14 +39,14 @@ struct ToyPhysicsConfiguration: Equatable, Sendable {
         ropeLength: 1.65,
         fixedTimeStep: 1 / 240,
         gravityMagnitude: 7.67,
-        motionAccelerationScale: 18,
+        motionAccelerationScale: 21,
         ropeStiffness: 2_600,
         ropeDamping: 14,
-        airDrag: 0.35,
+        airDrag: 0.3,
         maximumStretchRatio: 1.12,
-        soundThresholdRPS: 1.1,
-        soundRampRPS: 2.6,
-        orbitQualityThreshold: 0.65
+        soundThresholdRPS: 0.65,
+        soundRampRPS: 2.0,
+        orbitQualityThreshold: 0.55
     )
 
     static let testing = live

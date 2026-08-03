@@ -32,6 +32,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private let depthState: MTLDepthStencilState
     private let translucentDepthState: MTLDepthStencilState
     private let cylinder: MetalMesh
+    private let resonator: MetalMesh
+    private let wing: MetalMesh
     private let sphere: MetalMesh
     private let torus: MetalMesh
     private let ropeVertexBuffers: [MTLBuffer]
@@ -51,8 +53,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private var lastRippleTime: Float = 0
     private var viewportSize = SIMD2<Float>(1, 1)
 
-    private let cameraEye = SIMD3<Float>(0, 0.15, 9.6)
-    private let sceneAnchor = SIMD3<Float>(0, 0.75, 0)
+    private let cameraEye = SIMD3<Float>(0, 0.10, 9.25)
+    private let sceneAnchor = SIMD3<Float>(0.24, 0.72, 0)
 
     init(coordinator: ExperienceCoordinator) {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -113,6 +115,12 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         translucentDepthState = device.makeDepthStencilState(descriptor: translucentDescriptor)!
 
         cylinder = MeshGenerator.cylinder(device: device)
+        resonator = MeshGenerator.frustum(
+            device: device,
+            bottomRadius: 0.41,
+            topRadius: 0.5
+        )
+        wing = MeshGenerator.wing(device: device)
         sphere = MeshGenerator.sphere(device: device)
         torus = MeshGenerator.torus(device: device)
         ropeVertexBuffers = (0..<3).map { _ in
@@ -153,10 +161,14 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             return
         }
         inFlightSemaphore.wait()
+        commandBuffer.label = "竹知了画面"
         let ropeVertexBuffer = ropeVertexBuffers[frameResourceIndex]
         frameResourceIndex = (frameResourceIndex + 1) % ropeVertexBuffers.count
-        commandBuffer.addCompletedHandler { [inFlightSemaphore] _ in
+        commandBuffer.addCompletedHandler { [inFlightSemaphore] completedBuffer in
             inFlightSemaphore.signal()
+            if let error = completedBuffer.error {
+                print("Metal 渲染失败：\(error)；详情：\((error as NSError).userInfo)")
+            }
         }
 
         let snapshot = coordinator.frame(at: CACurrentMediaTime())
@@ -228,24 +240,52 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         bobPosition: SIMD3<Float>,
         viewProjection: simd_float4x4
     ) {
-        let bamboo = SIMD4<Float>(0.76, 0.55, 0.22, 1)
-        let lightBamboo = SIMD4<Float>(0.90, 0.72, 0.36, 1)
-        let red = SIMD4<Float>(0.58, 0.045, 0.025, 1)
-        let amber = SIMD4<Float>(0.57, 0.32, 0.07, 1)
-        let black = SIMD4<Float>(0.012, 0.010, 0.008, 1)
+        let bamboo = SIMD4<Float>(0.62, 0.42, 0.16, 1)
+        let cutBamboo = SIMD4<Float>(0.86, 0.69, 0.38, 1)
+        let paleBamboo = SIMD4<Float>(0.79, 0.64, 0.35, 0.92)
+        let lacquer = SIMD4<Float>(0.60, 0.075, 0.035, 1)
+        let cordRed = SIMD4<Float>(0.74, 0.16, 0.075, 1)
+        let ink = SIMD4<Float>(0.018, 0.014, 0.012, 1)
 
-        let shaftEnd = sceneAnchor + SIMD3<Float>(0.64, -1.52, -0.04)
+        let shaftStart = sceneAnchor + SIMD3<Float>(0.035, -0.055, -0.035)
+        let shaftEnd = sceneAnchor + SIMD3<Float>(0.58, -1.55, -0.10)
+        let shaftDirection = simd_normalize(shaftEnd - shaftStart)
         draw(
             mesh: cylinder,
-            modelMatrix: .segment(from: sceneAnchor, to: shaftEnd, radius: 0.075),
+            modelMatrix: .segment(from: shaftStart, to: shaftEnd, radius: 0.055),
             color: bamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
         )
-        drawSphere(at: sceneAnchor + SIMD3<Float>(-0.015, 0.24, 0), scale: 0.17, color: red, encoder: encoder, viewProjection: viewProjection)
-        drawSphere(at: sceneAnchor + SIMD3<Float>(-0.01, 0.075, 0), scale: 0.10, color: amber, encoder: encoder, viewProjection: viewProjection)
-        drawSphere(at: sceneAnchor + SIMD3<Float>(0, -0.045, 0), scale: 0.145, color: red, encoder: encoder, viewProjection: viewProjection)
+        draw(
+            mesh: cylinder,
+            modelMatrix: .segment(
+                from: sceneAnchor - shaftDirection * 0.08,
+                to: sceneAnchor + shaftDirection * 0.11,
+                radius: 0.092
+            ),
+            color: cordRed,
+            materialKind: 3,
+            encoder: encoder,
+            viewProjection: viewProjection
+        )
+        drawSphere(
+            at: sceneAnchor - shaftDirection * 0.20,
+            scale: 0.115,
+            color: lacquer,
+            materialKind: 3,
+            encoder: encoder,
+            viewProjection: viewProjection
+        )
+        drawSphere(
+            at: sceneAnchor + shaftDirection * 0.13,
+            scale: 0.071,
+            color: cutBamboo,
+            materialKind: 1,
+            encoder: encoder,
+            viewProjection: viewProjection
+        )
 
         let towardAnchor = simd_normalize(sceneAnchor - bobPosition)
         var bodyTangent = stableBodyTangent
@@ -271,8 +311,10 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             * simd_float4x4.rotation(spin)
 
         draw(
-            mesh: cylinder,
-            modelMatrix: bodyFrame * .translation(SIMD3<Float>(0, -0.38, 0)) * .scale(SIMD3<Float>(0.52, 0.74, 0.52)),
+            mesh: resonator,
+            modelMatrix: bodyFrame
+                * .translation(SIMD3<Float>(0, -0.42, 0))
+                * .scale(SIMD3<Float>(0.68, 0.84, 0.68)),
             color: bamboo,
             materialKind: 1,
             encoder: encoder,
@@ -280,41 +322,58 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         )
         draw(
             mesh: cylinder,
-            modelMatrix: bodyFrame * .translation(SIMD3<Float>(0, -0.035, 0)) * .scale(SIMD3<Float>(0.56, 0.095, 0.56)),
-            color: red,
+            modelMatrix: bodyFrame
+                * .translation(SIMD3<Float>(0, 0.005, 0))
+                * .scale(SIMD3<Float>(0.73, 0.074, 0.73)),
+            color: lacquer,
+            materialKind: 3,
             encoder: encoder,
             viewProjection: viewProjection
         )
         draw(
             mesh: cylinder,
-            modelMatrix: bodyFrame * .translation(SIMD3<Float>(0, 0.025, 0)) * .scale(SIMD3<Float>(0.49, 0.035, 0.49)),
-            color: SIMD4<Float>(0.88, 0.73, 0.42, 1),
+            modelMatrix: bodyFrame
+                * .translation(SIMD3<Float>(0, 0.057, 0))
+                * .scale(SIMD3<Float>(0.65, 0.030, 0.65)),
+            color: SIMD4<Float>(0.91, 0.79, 0.52, 1),
             materialKind: 2,
-            emissive: snapshot.state.activity * 1.2,
+            emissive: snapshot.state.activity * 0.34,
+            encoder: encoder,
+            viewProjection: viewProjection
+        )
+        draw(
+            mesh: sphere,
+            modelMatrix: bodyFrame
+                * .translation(SIMD3<Float>(0, -0.18, 0.31))
+                * .scale(SIMD3<Float>(0.28, 0.20, 0.18)),
+            color: cutBamboo,
+            materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
         )
 
         for (wingIndex, sign) in [Float(-1), 1].enumerated() {
             let eyeTransform = bodyFrame
-                * .translation(SIMD3<Float>(sign * 0.145, -0.18, 0.235))
-                * .scale(SIMD3<Float>(repeating: 0.075))
-            draw(mesh: sphere, modelMatrix: eyeTransform, color: black, encoder: encoder, viewProjection: viewProjection)
+                * .translation(SIMD3<Float>(sign * 0.105, -0.16, 0.43))
+                * .scale(SIMD3<Float>(repeating: 0.060))
+            draw(mesh: sphere, modelMatrix: eyeTransform, color: ink, encoder: encoder, viewProjection: viewProjection)
 
             let flap = wingAngles[wingIndex]
-            let wingRotation = simd_quatf(angle: sign * (0.16 + flap), axis: SIMD3<Float>(0, 0, 1))
-                * simd_quatf(angle: 0.16, axis: SIMD3<Float>(1, 0, 0))
+            let wingRotation = simd_quatf(angle: sign * (0.28 + flap * 0.45), axis: SIMD3<Float>(0, 0, 1))
+                * simd_quatf(angle: sign * 0.09, axis: SIMD3<Float>(0, 1, 0))
+                * simd_quatf(angle: 0.10, axis: SIMD3<Float>(1, 0, 0))
             let wingTransform = bodyFrame
-                * .translation(SIMD3<Float>(sign * 0.18, -0.43, 0.12))
+                * .translation(SIMD3<Float>(sign * 0.14, -0.43, 0.23))
                 * .rotation(wingRotation)
-                * .scale(SIMD3<Float>(0.26, 0.72, 0.075))
-            draw(mesh: sphere, modelMatrix: wingTransform, color: lightBamboo, materialKind: 1, encoder: encoder, viewProjection: viewProjection)
-
-            let footTransform = bodyFrame
-                * .translation(SIMD3<Float>(sign * 0.13, -0.78, 0.10))
-                * .rotation(angle: sign * -0.35, axis: SIMD3<Float>(0, 1, 0))
-                * .scale(SIMD3<Float>(0.12, 0.20, 0.11))
-            draw(mesh: sphere, modelMatrix: footTransform, color: bamboo, materialKind: 1, encoder: encoder, viewProjection: viewProjection)
+                * .scale(SIMD3<Float>(0.50, 0.86, 0.34))
+            draw(
+                mesh: wing,
+                modelMatrix: wingTransform,
+                color: paleBamboo,
+                materialKind: 5,
+                encoder: encoder,
+                viewProjection: viewProjection
+            )
         }
     }
 
@@ -365,8 +424,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             viewProjectionMatrix: viewProjection,
             modelMatrix: matrix_identity_float4x4,
             normalMatrix: matrix_identity_float4x4,
-            baseColor: SIMD4<Float>(0.94, 0.91, 0.78, 0.88),
-            materialParameters: .zero
+            baseColor: SIMD4<Float>(0.75, 0.66, 0.48, 0.90),
+            materialParameters: SIMD4<Float>(4, 0, 0, 0)
         )
         encoder.setCullMode(.none)
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
@@ -411,11 +470,14 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             wingAngles[wingIndex] += wingVelocities[wingIndex] * deltaTime
         }
 
-        if trail.last.map({ simd_distance($0, bobPosition) > 0.035 }) ?? true {
+        if snapshot.state.activity > 0.07,
+           trail.last.map({ simd_distance($0, bobPosition) > 0.045 }) ?? true {
             trail.insert(bobPosition, at: 0)
-            if trail.count > 42 {
-                trail.removeLast(trail.count - 42)
+            if trail.count > 34 {
+                trail.removeLast(trail.count - 34)
             }
+        } else if snapshot.state.activity < 0.04, !trail.isEmpty {
+            trail.removeLast(min(2, trail.count))
         }
 
         if snapshot.state.activity > 0.16,
@@ -435,15 +497,15 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
 
         for (index, position) in trail.enumerated() where index % 2 == 0 {
             let progress = Float(index) / Float(max(trail.count, 1))
-            let scale = 0.085 * (1 - progress) + 0.018
-            let alpha = (1 - progress) * 0.20
+            let scale = 0.064 * (1 - progress) + 0.014
+            let alpha = (1 - progress) * 0.14
             let transform = simd_float4x4.translation(position)
                 * .scale(SIMD3<Float>(repeating: scale))
             draw(
                 mesh: sphere,
                 modelMatrix: transform,
-                color: SIMD4<Float>(1.0, 0.53, 0.24, alpha),
-                emissive: 0.8,
+                color: SIMD4<Float>(0.97, 0.78, 0.43, alpha),
+                emissive: 0.42,
                 encoder: encoder,
                 viewProjection: viewProjection
             )
@@ -453,12 +515,12 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             let age = time - ripple.bornAt
             let progress = min(max(age / 0.9, 0), 1)
             let transform = simd_float4x4.translation(ripple.position + SIMD3<Float>(0, 0, 0.05))
-                * .scale(SIMD3<Float>(repeating: 0.28 + progress * 1.15))
+                * .scale(SIMD3<Float>(repeating: 0.25 + progress * 0.88))
             draw(
                 mesh: torus,
                 modelMatrix: transform,
-                color: SIMD4<Float>(1.0, 0.54, 0.25, (1 - progress) * 0.42),
-                emissive: 0.65,
+                color: SIMD4<Float>(0.97, 0.76, 0.38, (1 - progress) * 0.24),
+                emissive: 0.36,
                 encoder: encoder,
                 viewProjection: viewProjection
             )
@@ -471,6 +533,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         at position: SIMD3<Float>,
         scale: Float,
         color: SIMD4<Float>,
+        materialKind: Float = 0,
         encoder: MTLRenderCommandEncoder,
         viewProjection: simd_float4x4
     ) {
@@ -478,6 +541,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             mesh: sphere,
             modelMatrix: .translation(position) * .scale(SIMD3<Float>(repeating: scale)),
             color: color,
+            materialKind: materialKind,
             encoder: encoder,
             viewProjection: viewProjection
         )

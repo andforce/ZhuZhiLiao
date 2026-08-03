@@ -15,6 +15,7 @@ final class ExperienceCoordinator: ObservableObject {
     private let motionController: MotionController
     private let audioEngine: ToyAudioEngine
     private let counterService: CounterService
+    private let hapticFeedback = ToyHapticFeedback()
     private var simulation: ToySimulation
     private var simulationTask: Task<Void, Never>?
     private var latestSimulationFrame: SimulationFrame
@@ -58,6 +59,7 @@ final class ExperienceCoordinator: ObservableObject {
         guard !isRunningUnitTests else { return }
         startSimulationLoop()
         audioEngine.start()
+        hapticFeedback.prepare()
         counterService.start()
     }
 
@@ -70,6 +72,7 @@ final class ExperienceCoordinator: ObservableObject {
 
         guard !isRunningUnitTests else { return }
         audioEngine.pause()
+        hapticFeedback.reset()
         counterService.stop()
     }
 
@@ -175,9 +178,11 @@ final class ExperienceCoordinator: ObservableObject {
         elapsedTime += Float(clampedDeltaTime)
         pendingRenderedWahs += frame.completedWahs
 
-        if frame.completedWahs > 0, !automaticMode {
-            counterService.record(wahs: frame.completedWahs)
-            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.55)
+        if !automaticMode {
+            hapticFeedback.update(with: frame)
+            if frame.completedWahs > 0 {
+                counterService.record(wahs: frame.completedWahs)
+            }
         }
     }
 
@@ -191,5 +196,42 @@ final class ExperienceCoordinator: ObservableObject {
         )
         latestRotationRate = .zero
         pendingRenderedWahs = 0
+        hapticFeedback.reset()
+    }
+}
+
+@MainActor
+private final class ToyHapticFeedback {
+    private let startGenerator = UIImpactFeedbackGenerator(style: .soft)
+    private let revolutionGenerator = UIImpactFeedbackGenerator(style: .rigid)
+    private var isSpinning = false
+
+    func prepare() {
+        startGenerator.prepare()
+        revolutionGenerator.prepare()
+    }
+
+    func update(with frame: SimulationFrame) {
+        let shouldBeSpinning = frame.state.activity > 0.1
+            || frame.revolutionsPerSecond > 0.72
+
+        if shouldBeSpinning, !isSpinning {
+            startGenerator.impactOccurred(intensity: 0.62)
+            startGenerator.prepare()
+            isSpinning = true
+        } else if frame.state.activity < 0.035,
+                  frame.revolutionsPerSecond < 0.42 {
+            isSpinning = false
+        }
+
+        guard frame.completedWahs > 0 else { return }
+        let intensity = min(max(CGFloat(frame.revolutionsPerSecond / 3.2), 0.58), 1)
+        revolutionGenerator.impactOccurred(intensity: intensity)
+        revolutionGenerator.prepare()
+    }
+
+    func reset() {
+        isSpinning = false
+        prepare()
     }
 }

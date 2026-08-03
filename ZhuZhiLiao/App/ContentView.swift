@@ -17,18 +17,22 @@ struct ContentView: View {
                     .ignoresSafeArea()
             }
 
+            readabilityScrim
             interfaceOverlay
 
             if !hasSeenSafetyIntroduction {
                 SafetyIntroduction {
-                    hasSeenSafetyIntroduction = true
+                    withAnimation(.easeOut(duration: 0.28)) {
+                        hasSeenSafetyIntroduction = true
+                    }
                     coordinator.recalibrate()
                 }
                 .transition(.opacity)
             }
         }
         .preferredColorScheme(.dark)
-        .statusBarHidden()
+        .statusBarHidden(true)
+        .persistentSystemOverlays(.hidden)
         .onAppear {
             coordinator.start()
         }
@@ -45,89 +49,104 @@ struct ContentView: View {
         }
     }
 
-    private var interfaceOverlay: some View {
+    private var readabilityScrim: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top) {
-                titleBlock
-                Spacer()
-                Text("儿\n时\n玩\n物")
-                    .font(.system(size: 11, weight: .medium, design: .serif))
-                    .foregroundStyle(Color(red: 0.98, green: 0.78, blue: 0.62))
-                    .lineSpacing(2)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 8)
-                    .background(Color(red: 0.72, green: 0.20, blue: 0.10).opacity(0.9))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .accessibilityHidden(true)
-                Spacer(minLength: 42)
-                Button("重新校准") {
-                    coordinator.recalibrate()
-                }
-                .buttonStyle(InkCapsuleButtonStyle())
-                .accessibilityHint("把当前握持方向设为新的起始方向")
-            }
+            LinearGradient(
+                colors: [.black.opacity(0.22), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 150)
 
             Spacer()
 
-            HStack(alignment: .bottom, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("竹膜为鼓　松香为弦")
-                    Text("摩擦生振　膜腔共鸣")
-                }
-                .font(.system(size: 10, design: .serif))
-                .foregroundStyle(.white.opacity(0.42))
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 10) {
-                    speedReadout
-                    Button(coordinator.automaticMode ? "停一停" : "自动甩") {
-                        coordinator.toggleAutomaticMode()
-                    }
-                    .buttonStyle(GlowButtonStyle(isActive: coordinator.automaticMode))
-                    .accessibilityHint("不摇手机也能演示竹知了转动")
-                }
-            }
-
-            instructionPill
-                .padding(.top, 10)
-
-            statsLine
-                .padding(.top, 13)
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black.opacity(0.18), location: 0.30),
+                    .init(color: .black.opacity(0.66), location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 300)
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 14)
-        .padding(.bottom, 10)
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 
-    private var titleBlock: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(spacing: -4) {
-                ForEach(Array("竹知了"), id: \.self) { character in
-                    Text(String(character))
-                        .font(.custom("Songti SC", size: 43))
-                        .foregroundStyle(Color(red: 0.96, green: 0.92, blue: 0.83))
+    private var interfaceOverlay: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 18) {
+                BrandMark()
+
+                Spacer(minLength: 24)
+
+                Button {
+                    coordinator.recalibrate()
+                } label: {
+                    Label("校准", systemImage: "scope")
                 }
+                .buttonStyle(CalibrationButtonStyle())
+                .accessibilityHint("把当前握持方向设为新的起始方向")
             }
-            Text("一\n转\n，\n就\n哇\n哇\n地\n叫")
-                .font(.system(size: 12, design: .serif))
-                .foregroundStyle(.white.opacity(0.72))
-                .lineSpacing(1)
-                .padding(.top, 4)
+
+            Spacer(minLength: 220)
+
+            bottomHUD
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("竹知了，一转就哇哇地叫")
+        .safeAreaPadding(.horizontal, 20)
+        .safeAreaPadding(.top, 12)
+        .safeAreaPadding(.bottom, 10)
+    }
+
+    private var bottomHUD: some View {
+        VStack(spacing: 14) {
+            HStack(alignment: .bottom, spacing: 18) {
+                speedReadout
+
+                Spacer(minLength: 12)
+
+                Button {
+                    coordinator.toggleAutomaticMode()
+                } label: {
+                    Label(
+                        coordinator.automaticMode ? "回到手摇" : "自动演示",
+                        systemImage: coordinator.automaticMode ? "hand.raised" : "play.fill"
+                    )
+                }
+                .buttonStyle(DemoButtonStyle(isActive: coordinator.automaticMode))
+                .accessibilityHint(
+                    coordinator.automaticMode
+                        ? "停止自动演示，恢复用动作控制"
+                        : "不用摇手机也能查看竹知了转动"
+                )
+            }
+
+            instructionPanel
+            statistics
+        }
     }
 
     private var speedReadout: some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            Text(coordinator.revolutionsPerSecond, format: .number.precision(.fractionLength(1)))
-                .font(.custom("Songti SC", size: 30))
-                .monospacedDigit()
-                .foregroundStyle(Color(red: 1.0, green: 0.87, blue: 0.64))
-            Text("圈 / 秒")
-                .font(.system(size: 10, design: .serif))
-                .foregroundStyle(.white.opacity(0.55))
+        VStack(alignment: .leading, spacing: 2) {
+            Text("当前转速")
+                .font(.system(.caption2, design: .default, weight: .medium))
+                .foregroundStyle(.white.opacity(0.56))
+                .textCase(.uppercase)
+                .tracking(1.1)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(coordinator.revolutionsPerSecond, format: .number.precision(.fractionLength(1)))
+                    .font(.custom("Songti SC", size: 38, relativeTo: .largeTitle))
+                    .monospacedDigit()
+                    .foregroundStyle(Color(red: 0.98, green: 0.83, blue: 0.56))
+                    .contentTransition(.numericText())
+
+                Text("圈/秒")
+                    .font(.system(.caption, design: .default, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
@@ -135,101 +154,360 @@ struct ContentView: View {
         )
     }
 
-    private var instructionPill: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "gyroscope")
-                .rotationEffect(.degrees(coordinator.isRunning ? 22 : 0))
-                .animation(.easeInOut(duration: 0.5), value: coordinator.isRunning)
-            Text(coordinator.motionIsAvailable ? "握稳手机　用手腕画小圈" : "当前设备无动作传感器　可使用自动甩")
+    private var instructionPanel: some View {
+        HStack(spacing: 12) {
+            OrbitInstructionGlyph(isActive: coordinator.isRunning)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(instructionTitle)
+                    .font(.system(.subheadline, design: .default, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.94))
+
+                Text(instructionDetail)
+                    .font(.system(.caption, design: .default))
+                    .foregroundStyle(.white.opacity(0.58))
+            }
+
+            Spacer(minLength: 0)
         }
-        .font(.system(size: 13, weight: .medium, design: .serif))
-        .foregroundStyle(.white.opacity(0.86))
         .padding(.horizontal, 15)
-        .padding(.vertical, 10)
-        .background(.black.opacity(0.34), in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.09), lineWidth: 1))
-        .frame(maxWidth: .infinity)
-        .accessibilityLabel(coordinator.motionIsAvailable ? "握稳手机，用手腕画小圈" : "动作传感器不可用，请使用自动甩")
+        .frame(minHeight: 62)
+        .background(Color.black.opacity(0.38), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.10), lineWidth: 0.75)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(instructionTitle)，\(instructionDetail)")
     }
 
-    private var statsLine: some View {
-        Text("此刻 \(coordinator.stats.online) 人 · 来客 \(coordinator.stats.visitors) · 访问 \(coordinator.stats.visits) · 全球 \(coordinator.stats.wahs) 哇 · 我 \(coordinator.personalWahs) 哇")
-            .font(.system(size: 9, design: .serif))
-            .foregroundStyle(.white.opacity(0.45))
-            .lineLimit(1)
-            .minimumScaleFactor(0.65)
-            .frame(maxWidth: .infinity)
-            .contentTransition(.numericText())
-            .accessibilityLabel("全球统计：在线 \(coordinator.stats.online) 人，我转出了 \(coordinator.personalWahs) 哇")
+    private var instructionTitle: String {
+        if coordinator.automaticMode {
+            return "正在自动演示"
+        }
+        return coordinator.motionIsAvailable ? "以手肘为轴，让前臂画小圆" : "动作传感器不可用"
+    }
+
+    private var instructionDetail: String {
+        if coordinator.automaticMode {
+            return "轻点右侧按钮，可回到手摇"
+        }
+        return coordinator.motionIsAvailable ? "沿同一方向连续转动 · 顺时针或逆时针均可" : "请使用自动演示查看转动"
+    }
+
+    private var statistics: some View {
+        HStack(spacing: 0) {
+            Statistic(label: "此刻在线", value: coordinator.stats.online)
+            statisticDivider
+            Statistic(label: "全球共鸣", value: coordinator.stats.wahs)
+            statisticDivider
+            Statistic(label: "我的哇声", value: coordinator.personalWahs)
+        }
+        .frame(maxWidth: .infinity)
+        .contentTransition(.numericText())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "在线 \(coordinator.stats.online) 人，全球 \(coordinator.stats.wahs) 哇，我转出了 \(coordinator.personalWahs) 哇"
+        )
+    }
+
+    private var statisticDivider: some View {
+        Rectangle()
+            .fill(.white.opacity(0.12))
+            .frame(width: 0.5, height: 22)
+    }
+}
+
+private struct BrandMark: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 11) {
+            Text("竹\n知\n了")
+                .font(.custom("Songti SC", size: 34, relativeTo: .title))
+                .lineSpacing(-4)
+                .foregroundStyle(Color(red: 0.94, green: 0.89, blue: 0.78))
+                .fixedSize()
+
+            VStack(alignment: .leading, spacing: 9) {
+                Text("童玩")
+                    .font(.system(size: 10, weight: .semibold))
+                    .tracking(1.5)
+                    .foregroundStyle(Color(red: 1.0, green: 0.82, blue: 0.68))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 5)
+                    .background(
+                        Color(red: 0.62, green: 0.10, blue: 0.055),
+                        in: RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    )
+
+                Text("一转\n就哇哇叫")
+                    .font(.system(size: 11, weight: .regular))
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.60))
+                    .lineSpacing(5)
+                    .fixedSize()
+            }
+            .padding(.top, 3)
+        }
+        .shadow(color: .black.opacity(0.24), radius: 7, y: 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("竹知了，一转就哇哇叫")
+    }
+}
+
+private struct Statistic: View {
+    let label: String
+    let value: Int
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value, format: .number.notation(.compactName))
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.80))
+
+            Text(label)
+                .font(.system(size: 10, weight: .regular))
+                .foregroundStyle(.white.opacity(0.42))
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct OrbitInstructionGlyph: View {
+    let isActive: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var rotation = 0.0
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+                .frame(width: 28, height: 28)
+
+            Circle()
+                .trim(from: 0.06, to: 0.68)
+                .stroke(
+                    Color(red: 0.96, green: 0.66, blue: 0.34),
+                    style: StrokeStyle(lineWidth: 1.6, lineCap: .round)
+                )
+                .frame(width: 28, height: 28)
+
+            Circle()
+                .fill(Color(red: 0.72, green: 0.13, blue: 0.07))
+                .frame(width: 6, height: 6)
+                .offset(y: -14)
+        }
+        .rotationEffect(.degrees(rotation))
+        .frame(width: 34, height: 34)
+        .onAppear { updateAnimation() }
+        .onChange(of: isActive) { _, _ in updateAnimation() }
+    }
+
+    private func updateAnimation() {
+        guard isActive, !reduceMotion else {
+            rotation = 0
+            return
+        }
+        rotation = 0
+        withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+            rotation = 360
+        }
     }
 }
 
 private struct SafetyIntroduction: View {
     let continueAction: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var orbitRotation = 0.0
 
     var body: some View {
         ZStack {
-            Color(red: 0.025, green: 0.035, blue: 0.09).opacity(0.96)
-                .ignoresSafeArea()
+            LinearGradient(
+                colors: [
+                    Color(red: 0.018, green: 0.026, blue: 0.070),
+                    Color(red: 0.050, green: 0.058, blue: 0.112),
+                    Color(red: 0.105, green: 0.078, blue: 0.105)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 22) {
-                Image(systemName: "hand.raised.fill")
-                    .font(.system(size: 38, weight: .light))
-                    .foregroundStyle(Color(red: 0.95, green: 0.53, blue: 0.30))
+            VStack(spacing: 0) {
+                HStack {
+                    Text("竹知了")
+                        .font(.custom("Songti SC", size: 17, relativeTo: .headline))
+                        .foregroundStyle(Color(red: 0.91, green: 0.85, blue: 0.73))
+                    Spacer()
+                    Text("安全提示")
+                        .font(.system(.caption, design: .default, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.46))
+                }
 
-                Text("握稳手机")
-                    .font(.custom("Songti SC", size: 30))
+                Spacer()
 
-                Text("请留出安全空间，用手腕轻轻画小圈。\n不需要大力挥动，也不要松开手机。")
-                    .font(.system(size: 15, design: .serif))
+                orbitIllustration
+
+                Text("先握稳，再转圈")
+                    .font(.custom("Songti SC", size: 31, relativeTo: .largeTitle))
+                    .foregroundStyle(Color(red: 0.96, green: 0.91, blue: 0.82))
+                    .padding(.top, 30)
+
+                Text("像摇转经筒一样，让前臂沿同一方向连续画圆。")
+                    .font(.system(.body, design: .default))
+                    .foregroundStyle(.white.opacity(0.62))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.72))
-                    .lineSpacing(6)
+                    .padding(.top, 10)
 
-                Button("开始体验", action: continueAction)
-                    .buttonStyle(GlowButtonStyle(isActive: true))
+                VStack(spacing: 15) {
+                    SafetyStep(number: "01", text: "留出一臂的安全空间")
+                    SafetyStep(number: "02", text: "单手握紧 iPhone，手肘靠近身体")
+                    SafetyStep(number: "03", text: "顺时针或逆时针转圈，不要来回甩动")
+                }
+                .padding(.top, 30)
+
+                Spacer()
+
+                Text("起转与每完成一圈，都有触感反馈")
+                    .font(.system(.caption, design: .default))
+                    .foregroundStyle(.white.opacity(0.44))
+                    .padding(.bottom, 14)
+
+                Button("我已握稳", action: continueAction)
+                    .buttonStyle(PrimaryActionButtonStyle())
             }
-            .padding(32)
+            .safeAreaPadding(.horizontal, 26)
+            .safeAreaPadding(.top, 16)
+            .safeAreaPadding(.bottom, 12)
         }
         .accessibilityElement(children: .contain)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.linear(duration: 4.5).repeatForever(autoreverses: false)) {
+                orbitRotation = 360
+            }
+        }
+    }
+
+    private var orbitIllustration: some View {
+        ZStack {
+            Circle()
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+                .frame(width: 162, height: 162)
+
+            Circle()
+                .trim(from: 0.04, to: 0.78)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.93, green: 0.69, blue: 0.38),
+                            Color(red: 0.59, green: 0.10, blue: 0.055)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    style: StrokeStyle(lineWidth: 2, lineCap: .round)
+                )
+                .frame(width: 162, height: 162)
+
+            Circle()
+                .fill(Color(red: 0.70, green: 0.12, blue: 0.065))
+                .frame(width: 12, height: 12)
+                .offset(y: -81)
+
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(Color(red: 0.14, green: 0.14, blue: 0.16))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .stroke(.white.opacity(0.32), lineWidth: 1)
+                }
+                .frame(width: 38, height: 72)
+                .rotationEffect(.degrees(14))
+        }
+        .rotationEffect(.degrees(orbitRotation))
+        .accessibilityHidden(true)
     }
 }
 
-private struct InkCapsuleButtonStyle: ButtonStyle {
+private struct SafetyStep: View {
+    let number: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Text(number)
+                .font(.system(.caption2, design: .rounded, weight: .bold))
+                .foregroundStyle(Color(red: 0.94, green: 0.61, blue: 0.33))
+                .frame(width: 28, alignment: .leading)
+
+            Text(text)
+                .font(.system(.subheadline, design: .default, weight: .medium))
+                .foregroundStyle(.white.opacity(0.80))
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct CalibrationButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, design: .serif))
-            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.5 : 0.72))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(.black.opacity(0.2), in: Capsule())
-            .overlay(Capsule().stroke(.white.opacity(0.16), lineWidth: 1))
+            .font(.system(.caption, design: .default, weight: .semibold))
+            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.56 : 0.82))
+            .padding(.horizontal, 13)
+            .frame(minHeight: 44)
+            .background(Color.black.opacity(configuration.isPressed ? 0.34 : 0.23), in: Capsule())
+            .overlay {
+                Capsule().stroke(.white.opacity(0.14), lineWidth: 0.75)
+            }
+            .contentShape(Capsule())
     }
 }
 
-private struct GlowButtonStyle: ButtonStyle {
+private struct DemoButtonStyle: ButtonStyle {
     let isActive: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .medium, design: .serif))
-            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.65 : 0.95))
-            .frame(minWidth: 92)
-            .padding(.horizontal, 15)
-            .padding(.vertical, 11)
+            .font(.system(.subheadline, design: .default, weight: .semibold))
+            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.68 : 0.94))
+            .padding(.horizontal, 18)
+            .frame(minWidth: 126, minHeight: 48)
             .background(
                 isActive
-                    ? Color(red: 0.91, green: 0.29, blue: 0.15).opacity(0.92)
-                    : Color.black.opacity(0.26),
+                    ? Color(red: 0.61, green: 0.09, blue: 0.045)
+                    : Color.black.opacity(0.35),
                 in: Capsule()
             )
-            .overlay(
+            .overlay {
                 Capsule().stroke(
-                    Color(red: 1, green: 0.45, blue: 0.28).opacity(isActive ? 0.6 : 0.35),
-                    lineWidth: 1
+                    isActive
+                        ? Color(red: 0.94, green: 0.42, blue: 0.24).opacity(0.58)
+                        : Color.white.opacity(0.14),
+                    lineWidth: 0.8
                 )
+            }
+            .scaleEffect(configuration.isPressed ? 0.975 : 1)
+            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+}
+
+private struct PrimaryActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(.headline, design: .default, weight: .semibold))
+            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.72 : 0.96))
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(
+                Color(red: 0.64, green: 0.095, blue: 0.045)
+                    .opacity(configuration.isPressed ? 0.78 : 1),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
-            .shadow(color: Color.orange.opacity(isActive ? 0.28 : 0), radius: 15)
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color(red: 0.96, green: 0.47, blue: 0.27).opacity(0.48), lineWidth: 0.8)
+            }
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
     }
 }
