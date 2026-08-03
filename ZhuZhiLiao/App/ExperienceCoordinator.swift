@@ -2,6 +2,15 @@ import Combine
 import Foundation
 import UIKit
 
+enum ToyInteractionState: Equatable, Sendable {
+    case idle
+    case shaking
+    case spinning
+    case touching
+    case automatic
+    case unavailable
+}
+
 @MainActor
 final class ExperienceCoordinator: ObservableObject {
     @Published private(set) var revolutionsPerSecond: Float = 0
@@ -10,6 +19,7 @@ final class ExperienceCoordinator: ObservableObject {
     @Published private(set) var personalWahs = 0
     @Published private(set) var motionIsAvailable = false
     @Published private(set) var isRunning = false
+    @Published private(set) var interactionState: ToyInteractionState = .idle
     private var automaticMode = false
 
     private let motionController: MotionController
@@ -28,6 +38,8 @@ final class ExperienceCoordinator: ObservableObject {
     private var automaticRPS: Float = 0
     private var pointerAnchorTarget: SIMD3<Float>?
     private var pointerIsActive = false
+    private var hasUsedPointerFallback = false
+    private var latestShakeDrive = ShakeDrive.inactive
     private let isRunningUnitTests: Bool
 
     init(
@@ -55,9 +67,10 @@ final class ExperienceCoordinator: ObservableObject {
         motionController.start()
         motionIsAvailable = motionController.isAvailable
 
-        if !motionIsAvailable {
-            automaticMode = true
-        }
+        automaticMode = !motionIsAvailable && !hasUsedPointerFallback
+        interactionState = automaticMode
+            ? .automatic
+            : (motionIsAvailable ? .idle : .unavailable)
 
         guard !isRunningUnitTests else { return }
         startSimulationLoop()
@@ -80,21 +93,30 @@ final class ExperienceCoordinator: ObservableObject {
     }
 
     func recalibrate() {
-        pointerAnchorTarget = nil
+        pointerAnchorTarget = .zero
         pointerIsActive = false
+        latestShakeDrive = .inactive
         motionController.resetCalibration()
-        if automaticMode {
+        if automaticMode || !motionIsAvailable {
             resetSimulation(gravityDirection: SIMD3<Float>(0, -1, 0))
             awaitingCalibratedGravity = false
         } else {
             awaitingCalibratedGravity = true
         }
+        interactionState = automaticMode
+            ? .automatic
+            : (motionIsAvailable ? .idle : .unavailable)
     }
 
     /// 把 SwiftUI 触点换算到与 Metal 场景 z=0 平面相同的世界坐标。
     /// 这使 iOS 上的手指/模拟器鼠标与网页版 pointer target 语义一致。
     func movePointer(to location: CGPoint, in viewport: CGSize) {
         guard viewport.width > 0, viewport.height > 0 else { return }
+
+        if !pointerIsActive {
+            motionController.resetGestureState(preservingDirection: true)
+            latestShakeDrive = .inactive
+        }
 
         let visibleHeight = ToySceneLayout.visibleHeightAtToyPlane
         let visibleWidth = visibleHeight * Float(viewport.width / viewport.height)
@@ -107,11 +129,17 @@ final class ExperienceCoordinator: ObservableObject {
         )
         pointerAnchorTarget = worldPoint - ToySceneLayout.initialAnchor
         pointerIsActive = true
+        hasUsedPointerFallback = true
         automaticMode = false
+        interactionState = .touching
     }
 
     func endPointerInteraction() {
         pointerIsActive = false
+        pointerAnchorTarget = .zero
+        latestShakeDrive = .inactive
+        motionController.resetGestureState(preservingDirection: true)
+        interactionState = motionIsAvailable ? .idle : .unavailable
     }
 
     func frame(at timestamp: CFTimeInterval) -> RenderSnapshot {
@@ -133,6 +161,7 @@ final class ExperienceCoordinator: ObservableObject {
             activity = frame.state.activity
             stats = counterService.stats
             personalWahs = counterService.personalWahs
+            interactionState = resolvedInteractionState(for: frame)
         }
 
         return RenderSnapshot(
@@ -169,6 +198,7 @@ final class ExperienceCoordinator: ObservableObject {
                 anchorTarget: pointerAnchorTarget
             )
             latestRotationRate = .zero
+            latestShakeDrive = .inactive
         } else if automaticMode {
             // 网页“自动甩”的同款输入：转速缓入到 3.4 圈/秒，杆梢沿
             // iPhone 小屏使用网页响应式比例 0.13/0.28，由模拟器内部再做
@@ -189,6 +219,7 @@ final class ExperienceCoordinator: ObservableObject {
                 anchorTarget: target
             )
             latestRotationRate = input.rotationRate
+            latestShakeDrive = .inactive
         } else {
             let sample = motionController.latestSample()
             if sample.isAvailable, awaitingCalibratedGravity {
@@ -201,9 +232,11 @@ final class ExperienceCoordinator: ObservableObject {
                     ? sample.gravityDirection
                     : SIMD3<Float>(0, -1, 0),
                 rotationRate: sample.isAvailable ? sample.rotationRate : .zero,
-                anchorTarget: pointerAnchorTarget
+                anchorTarget: .zero,
+                shakeDrive: sample.isAvailable ? sample.shakeDrive : .inactive
             )
             latestRotationRate = input.rotationRate
+            latestShakeDrive = input.shakeDrive
         }
 
         let frame = simulation.advance(input: input, deltaTime: clampedDeltaTime)
@@ -217,6 +250,26 @@ final class ExperienceCoordinator: ObservableObject {
                 counterService.record(wahs: frame.completedWahs)
             }
         }
+    }
+
+    private func resolvedInteractionState(for frame: SimulationFrame) -> ToyInteractionState {
+        if pointerIsActive {
+            return .touching
+        }
+        if automaticMode {
+            return .automatic
+        }
+        if !motionIsAvailable {
+            return .unavailable
+        }
+        if frame.state.activity > 0.08,
+           frame.state.orbitCoherence >= 0.60 {
+            return .spinning
+        }
+        if latestShakeDrive.isActive {
+            return .shaking
+        }
+        return .idle
     }
 
     private func resetSimulation(gravityDirection: SIMD3<Float>) {
@@ -247,7 +300,7 @@ private final class ToyHapticFeedback {
 
     func update(with frame: SimulationFrame) {
         let shouldBeSpinning = frame.state.activity > 0.1
-            || frame.revolutionsPerSecond > 0.72
+            && frame.state.orbitCoherence >= 0.60
 
         if shouldBeSpinning, !isSpinning {
             startGenerator.impactOccurred(intensity: 0.62)

@@ -25,7 +25,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSMotionUsageDescription</key>
-	<string>运动数据仅用于在本机控制竹知了的转动方向，不会上传。</string>
+	<string>运动数据仅用于在本机识别手机摇动并控制竹知了，不会上传。</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiresFullScreen</key>

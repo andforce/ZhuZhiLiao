@@ -153,7 +153,7 @@ struct ContentView: View {
 
     private var instructionPanel: some View {
         HStack(spacing: 12) {
-            OrbitInstructionGlyph(isActive: coordinator.isRunning)
+            OrbitInstructionGlyph(state: coordinator.interactionState)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(instructionTitle)
@@ -179,13 +179,37 @@ struct ContentView: View {
     }
 
     private var instructionTitle: String {
-        coordinator.motionIsAvailable
-            ? "按住画圈，或握住手机转动"
-            : "按住屏幕画圈"
+        switch coordinator.interactionState {
+        case .idle:
+            "轻轻往复摇动手机"
+        case .shaking:
+            "已感应，继续摇动"
+        case .spinning:
+            "竹知了已经转起来了"
+        case .touching:
+            "正在用手指控制"
+        case .automatic:
+            "正在自动演示"
+        case .unavailable:
+            "按住屏幕滑动"
+        }
     }
 
     private var instructionDetail: String {
-        "沿同一方向连续转动 · 转得越快叫得越响"
+        switch coordinator.interactionState {
+        case .idle:
+            "任意方向短幅连续摇动 · 也可按住屏幕滑动"
+        case .shaking:
+            "正在蓄力成圈 · 不需要大幅甩动"
+        case .spinning:
+            "持续摇动会转得更快、叫得更响"
+        case .touching:
+            "沿屏幕连续画圈 · 松手后恢复动作控制"
+        case .automatic:
+            "触摸屏幕后可切换为手指控制"
+        case .unavailable:
+            "动作传感器不可用 · 请沿屏幕连续画圈"
+        }
     }
 
     private var statistics: some View {
@@ -267,9 +291,29 @@ private struct Statistic: View {
 }
 
 private struct OrbitInstructionGlyph: View {
-    let isActive: Bool
+    let state: ToyInteractionState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rotation = 0.0
+
+    private var isActive: Bool {
+        switch state {
+        case .shaking, .spinning, .touching, .automatic:
+            true
+        case .idle, .unavailable:
+            false
+        }
+    }
+
+    private var accentColor: Color {
+        switch state {
+        case .spinning:
+            Color(red: 1.0, green: 0.76, blue: 0.34)
+        case .shaking, .touching, .automatic:
+            Color(red: 0.96, green: 0.66, blue: 0.34)
+        case .idle, .unavailable:
+            .white.opacity(0.38)
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -280,7 +324,7 @@ private struct OrbitInstructionGlyph: View {
             Circle()
                 .trim(from: 0.06, to: 0.68)
                 .stroke(
-                    Color(red: 0.96, green: 0.66, blue: 0.34),
+                    accentColor,
                     style: StrokeStyle(lineWidth: 1.6, lineCap: .round)
                 )
                 .frame(width: 28, height: 28)
@@ -293,7 +337,7 @@ private struct OrbitInstructionGlyph: View {
         .rotationEffect(.degrees(rotation))
         .frame(width: 34, height: 34)
         .onAppear { updateAnimation() }
-        .onChange(of: isActive) { _, _ in updateAnimation() }
+        .onChange(of: state) { _, _ in updateAnimation() }
     }
 
     private func updateAnimation() {
@@ -341,12 +385,12 @@ private struct SafetyIntroduction: View {
 
                 orbitIllustration
 
-                Text("先握稳，再转圈")
+                Text("握稳手机，轻轻摇动")
                     .font(.custom("Songti SC", size: 31, relativeTo: .largeTitle))
                     .foregroundStyle(Color(red: 0.96, green: 0.91, blue: 0.82))
                     .padding(.top, 30)
 
-                Text("像摇转经筒一样，让前臂沿同一方向连续画圆。")
+                Text("任意方向短幅连续摇动，竹知了会自然摆动并逐渐转成圆圈。")
                     .font(.system(.body, design: .default))
                     .foregroundStyle(.white.opacity(0.62))
                     .multilineTextAlignment(.center)
@@ -354,14 +398,14 @@ private struct SafetyIntroduction: View {
 
                 VStack(spacing: 15) {
                     SafetyStep(number: "01", text: "留出一臂的安全空间")
-                    SafetyStep(number: "02", text: "单手握紧 iPhone，手肘靠近身体")
-                    SafetyStep(number: "03", text: "顺时针或逆时针转圈，不要来回甩动")
+                    SafetyStep(number: "02", text: "单手握紧 iPhone，使用短幅动作")
+                    SafetyStep(number: "03", text: "连续轻摇即可，不需要大力挥动")
                 }
                 .padding(.top, 30)
 
                 Spacer()
 
-                Text("起转与每完成一圈，都有触感反馈")
+                Text("稳定起转与每完成一圈，都有触感反馈")
                     .font(.system(.caption, design: .default))
                     .foregroundStyle(.white.opacity(0.44))
                     .padding(.bottom, 14)

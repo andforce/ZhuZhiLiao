@@ -26,7 +26,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CADisableMinimumFrameDurationOnPhone: true
         ITSAppUsesNonExemptEncryption: false
-        NSMotionUsageDescription: 运动数据仅用于在本机控制竹知了的转动方向，不会上传。
+        NSMotionUsageDescription: 运动数据仅用于在本机识别手机摇动并控制竹知了，不会上传。
         UILaunchScreen: {}
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:

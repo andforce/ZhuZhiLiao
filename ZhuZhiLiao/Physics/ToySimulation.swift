@@ -8,6 +8,8 @@ struct MotionInput: Equatable, Sendable {
     /// 网页版的鼠标/触摸输入：杆梢相对初始位置的目标位移。
     /// `nil` 表示杆梢保持当前位置，仅使用设备惯性输入。
     var anchorTarget: SIMD3<Float>? = nil
+    /// 任意方向持续摇动产生的稳定切向助力；触摸模式始终传入 `.inactive`。
+    var shakeDrive: ShakeDrive = .inactive
 
     static let zero = MotionInput(
         anchorAcceleration: .zero,
@@ -24,6 +26,8 @@ struct ToyPhysicsState: Equatable, Sendable {
     var angularVelocity: SIMD3<Float>
     var tension: Float
     var activity: Float
+    /// 角速度方向在一段时间内保持一致的程度，防止往复摆动误发声。
+    var orbitCoherence: Float = 0
     /// 杆梢相对初始场景锚点的位置。
     var anchorOffset: SIMD3<Float> = .zero
 }
@@ -40,6 +44,11 @@ struct ToyPhysicsConfiguration: Equatable, Sendable {
     var soundThresholdRPS: Float
     var soundRampRPS: Float
     var orbitQualityThreshold: Float
+    var minimumShakeRPS: Float
+    var maximumShakeRPS: Float
+    var shakeDriveResponseTime: Float
+    var maximumShakeAcceleration: Float
+    var coherenceThreshold: Float
 
     static let live = ToyPhysicsConfiguration(
         ropeLength: 1.65,
@@ -54,7 +63,12 @@ struct ToyPhysicsConfiguration: Equatable, Sendable {
         maximumStretchRatio: .greatestFiniteMagnitude,
         soundThresholdRPS: 1.1,
         soundRampRPS: 2.6,
-        orbitQualityThreshold: 0.55
+        orbitQualityThreshold: 0.55,
+        minimumShakeRPS: 1.2,
+        maximumShakeRPS: 3.4,
+        shakeDriveResponseTime: 0.35,
+        maximumShakeAcceleration: 35,
+        coherenceThreshold: 0.60
     )
 
     static let testing = live
@@ -70,7 +84,12 @@ struct ToyPhysicsConfiguration: Equatable, Sendable {
         maximumStretchRatio: 10,
         soundThresholdRPS: 1.1,
         soundRampRPS: 2.6,
-        orbitQualityThreshold: 0.65
+        orbitQualityThreshold: 0.65,
+        minimumShakeRPS: 1.2,
+        maximumShakeRPS: 3.4,
+        shakeDriveResponseTime: 0.35,
+        maximumShakeAcceleration: 35,
+        coherenceThreshold: 0.60
     )
 }
 
@@ -87,6 +106,8 @@ struct ToySimulation: Sendable {
     private var orbitCounter = OrbitCounter()
     private var phase: Float = 0
     private var stableOrbitAxis = SIMD3<Float>(0, 0, 1)
+    private var hasStableOrbitAxis = false
+    private var lastDriveAxis: SIMD3<Float>?
 
     private(set) var state: ToyPhysicsState
 
@@ -121,6 +142,8 @@ struct ToySimulation: Sendable {
         orbitCounter.reset()
         phase = 0
         stableOrbitAxis = SIMD3<Float>(0, 0, 1)
+        hasStableOrbitAxis = false
+        lastDriveAxis = nil
     }
 
     mutating func advance(input: MotionInput, deltaTime: TimeInterval) -> SimulationFrame {
@@ -155,10 +178,16 @@ struct ToySimulation: Sendable {
             anchorVelocity = anchorDelta / timeStep
         }
 
+        synchronizeDriveDirection(input.shakeDrive)
+
         let gravity = input.gravityDirection.normalized(or: .zero) * configuration.gravityMagnitude
         var acceleration = gravity
             - input.anchorAcceleration * configuration.motionAccelerationScale
             - state.velocity * configuration.airDrag
+        acceleration += shakeAssistance(
+            input.shakeDrive,
+            anchorVelocity: anchorVelocity
+        )
 
         let distance = simd_length(state.position)
         if distance > configuration.ropeLength, distance > 0.000_001 {
@@ -186,18 +215,84 @@ struct ToySimulation: Sendable {
             }
         }
 
-        updateDerivedState(anchorVelocity: anchorVelocity, timeStep: timeStep)
-        return updateRevolutionCount(timeStep: timeStep)
+        let orbitQuality = updateDerivedState(
+            anchorVelocity: anchorVelocity,
+            preferredDriveAxis: input.shakeDrive.isActive
+                ? input.shakeDrive.orbitAxis
+                : nil,
+            timeStep: timeStep
+        )
+        return updateRevolutionCount(
+            orbitQuality: orbitQuality,
+            timeStep: timeStep
+        )
     }
 
+    private mutating func synchronizeDriveDirection(_ drive: ShakeDrive) {
+        guard drive.isActive else { return }
+        let axis = drive.orbitAxis.normalized(or: ShakeDrive.defaultOrbitAxis)
+
+        if let lastDriveAxis, simd_dot(lastDriveAxis, axis) < 0.5 {
+            orbitCounter.reset()
+            state.orbitCoherence = 0
+            state.activity = 0
+            stableOrbitAxis = axis
+            hasStableOrbitAxis = true
+        } else if lastDriveAxis == nil,
+                  simd_length(state.angularVelocity) < 0.5 {
+            stableOrbitAxis = axis
+            hasStableOrbitAxis = true
+        }
+        lastDriveAxis = axis
+    }
+
+    private func shakeAssistance(
+        _ drive: ShakeDrive,
+        anchorVelocity: SIMD3<Float>
+    ) -> SIMD3<Float> {
+        guard drive.isActive else { return .zero }
+
+        let axis = drive.orbitAxis.normalized(or: ShakeDrive.defaultOrbitAxis)
+        let radiusDirection = state.position.normalized(or: SIMD3<Float>(0, -1, 0))
+        var tangent = simd_cross(axis, radiusDirection)
+        if simd_length_squared(tangent) < 0.000_001 {
+            let fallback = abs(axis.y) < 0.9
+                ? SIMD3<Float>(0, 1, 0)
+                : SIMD3<Float>(1, 0, 0)
+            tangent = simd_cross(axis, fallback)
+        }
+        tangent = tangent.normalized(or: SIMD3<Float>(1, 0, 0))
+
+        let intensity = clamp(drive.intensity, 0, 1)
+        let targetRPS = configuration.minimumShakeRPS
+            + (configuration.maximumShakeRPS - configuration.minimumShakeRPS) * intensity
+        let effectiveRadius = clamp(
+            simd_length(state.position),
+            configuration.ropeLength * 0.55,
+            configuration.ropeLength
+        )
+        let targetTangentialSpeed = targetRPS * 2 * .pi * effectiveRadius
+        let relativeVelocity = state.velocity - anchorVelocity
+        let currentTangentialSpeed = simd_dot(relativeVelocity, tangent)
+        let speedError = max(0, targetTangentialSpeed - currentTangentialSpeed)
+        let requestedAcceleration = configuration.shakeDriveResponseTime > 0
+            ? speedError / configuration.shakeDriveResponseTime
+            : configuration.maximumShakeAcceleration
+        let accelerationLimit = configuration.maximumShakeAcceleration
+            * (0.35 + 0.65 * intensity)
+        return tangent * min(requestedAcceleration, accelerationLimit)
+    }
+
+    @discardableResult
     private mutating func updateDerivedState(
         anchorVelocity: SIMD3<Float>,
+        preferredDriveAxis: SIMD3<Float>?,
         timeStep: Float
-    ) {
+    ) -> Float {
         let distanceSquared = simd_length_squared(state.position)
         let measuredAngularVelocity: SIMD3<Float>
+        let relativeVelocity = state.velocity - anchorVelocity
         if distanceSquared > 0.000_001 {
-            let relativeVelocity = state.velocity - anchorVelocity
             measuredAngularVelocity = simd_cross(state.position, relativeVelocity) / distanceSquared
         } else {
             measuredAngularVelocity = .zero
@@ -209,14 +304,41 @@ struct ToySimulation: Sendable {
             * min(1, timeStep * 9)
 
         let measuredAngularSpeed = simd_length(measuredAngularVelocity)
+        var targetCoherence: Float = 0
         if measuredAngularSpeed > 0.08 {
             let measuredAxis = measuredAngularVelocity / measuredAngularSpeed
-            if simd_dot(measuredAxis, stableOrbitAxis) < 0 {
+            if !hasStableOrbitAxis {
                 stableOrbitAxis = measuredAxis
+                hasStableOrbitAxis = true
             } else {
-                stableOrbitAxis = simd_normalize(stableOrbitAxis * 0.88 + measuredAxis * 0.12)
+                let referenceAxis = preferredDriveAxis?.normalized(or: stableOrbitAxis)
+                    ?? stableOrbitAxis
+                let alignment = simd_dot(measuredAxis, referenceAxis)
+                if alignment >= 0.25 {
+                    targetCoherence = smoothStep(
+                        edge0: 0.65,
+                        edge1: 0.98,
+                        value: alignment
+                    )
+                    if preferredDriveAxis != nil {
+                        stableOrbitAxis = referenceAxis
+                    } else {
+                        stableOrbitAxis = (stableOrbitAxis * 0.88 + measuredAxis * 0.12)
+                            .normalized(or: measuredAxis)
+                    }
+                } else {
+                    state.orbitCoherence = 0
+                    orbitCounter.reset()
+                    if alignment < -0.25 || preferredDriveAxis == nil {
+                        stableOrbitAxis = measuredAxis
+                    }
+                }
             }
         }
+
+        let coherenceResponse: Float = targetCoherence > state.orbitCoherence ? 4.5 : 12
+        state.orbitCoherence += (targetCoherence - state.orbitCoherence)
+            * min(1, timeStep * coherenceResponse)
 
         let angularSpeed = simd_length(state.angularVelocity)
         if measuredAngularSpeed <= 0.000_001, angularSpeed > 0.000_001 {
@@ -225,6 +347,11 @@ struct ToySimulation: Sendable {
 
         let distance = simd_length(state.position)
         state.tension = clamp((distance / configuration.ropeLength - 0.88) / 0.12, 0, 1)
+        let speed = simd_length(relativeVelocity)
+        let crossMagnitude = simd_length(simd_cross(state.position, relativeVelocity))
+        let orbitQuality = distance > 0.000_001 && speed > 0.000_001
+            ? crossMagnitude / (distance * speed)
+            : 0
 
         let rps = angularSpeed / (2 * .pi)
         let drive = clamp(
@@ -232,27 +359,38 @@ struct ToySimulation: Sendable {
             0,
             1
         )
-        let targetActivity = pow(drive, 1.25) * state.tension
+        let qualityGate = smoothStep(
+            edge0: configuration.orbitQualityThreshold,
+            edge1: 0.92,
+            value: orbitQuality
+        )
+        let coherenceGate = smoothStep(
+            edge0: configuration.coherenceThreshold,
+            edge1: 0.88,
+            value: state.orbitCoherence
+        )
+        let targetActivity = pow(drive, 1.25)
+            * state.tension
+            * qualityGate
+            * coherenceGate
         let response: Float = targetActivity > state.activity ? 10 : 3.2
         state.activity += (targetActivity - state.activity) * min(1, timeStep * response)
         phase += angularSpeed * timeStep * dominantAxisSign(state.angularVelocity)
         phase.formTruncatingRemainder(dividingBy: 2 * .pi)
+        return orbitQuality
     }
 
-    private mutating func updateRevolutionCount(timeStep: Float) -> Int {
-        let positionMagnitude = simd_length(state.position)
-        let speed = simd_length(state.velocity)
-        let crossMagnitude = simd_length(simd_cross(state.position, state.velocity))
-        let orbitQuality = positionMagnitude > 0.000_001 && speed > 0.000_001
-            ? crossMagnitude / (positionMagnitude * speed)
-            : 0
-
+    private mutating func updateRevolutionCount(
+        orbitQuality: Float,
+        timeStep: Float
+    ) -> Int {
         let angularSpeed = simd_length(state.angularVelocity)
         return orbitCounter.update(
             angleDelta: angularSpeed * timeStep,
             axis: angularSpeed > 0.000_001 ? state.angularVelocity / angularSpeed : stableOrbitAxis,
             isQualified: state.activity > 0.3
                 && state.tension > 0.8
+                && state.orbitCoherence >= configuration.coherenceThreshold
                 && orbitQuality > configuration.orbitQualityThreshold
         )
     }
@@ -331,6 +469,12 @@ private func dominantAxisSign(_ value: SIMD3<Float>) -> Float {
         dominant = value.z
     }
     return dominant < 0 ? -1 : 1
+}
+
+private func smoothStep(edge0: Float, edge1: Float, value: Float) -> Float {
+    guard edge1 > edge0 else { return value >= edge1 ? 1 : 0 }
+    let fraction = clamp((value - edge0) / (edge1 - edge0), 0, 1)
+    return fraction * fraction * (3 - 2 * fraction)
 }
 
 private extension SIMD3 where Scalar == Float {

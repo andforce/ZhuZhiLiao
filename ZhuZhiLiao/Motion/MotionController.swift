@@ -1,4 +1,5 @@
 @preconcurrency import CoreMotion
+import Foundation
 import simd
 
 struct MotionSample: Equatable, Sendable {
@@ -6,6 +7,7 @@ struct MotionSample: Equatable, Sendable {
     var gravityDirection: SIMD3<Float>
     var rotationRate: SIMD3<Float>
     var relativeAttitude: simd_quatf
+    var shakeDrive: ShakeDrive
     var timestamp: TimeInterval
     var isAvailable: Bool
 
@@ -14,6 +16,7 @@ struct MotionSample: Equatable, Sendable {
         gravityDirection: SIMD3<Float>(0, -1, 0),
         rotationRate: .zero,
         relativeAttitude: simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0)),
+        shakeDrive: .inactive,
         timestamp: 0,
         isAvailable: false
     )
@@ -22,9 +25,14 @@ struct MotionSample: Equatable, Sendable {
 @MainActor
 final class MotionController {
     private let manager = CMMotionManager()
-    private var referenceAttitude: simd_quatf?
-    private var accelerationFilter = MotionSampleFilter()
-    private var elbowPivotFilter = ElbowPivotMotionFilter()
+    private let processor = MotionSampleProcessor()
+    private let processingQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "com.azhegezhege.zhuzhiliao.motion"
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .userInteractive
+        return queue
+    }()
 
     private(set) var isRunning = false
 
@@ -39,61 +47,147 @@ final class MotionController {
         }
         guard !isRunning else { return }
 
+        processor.beginSession()
         manager.deviceMotionUpdateInterval = 1.0 / 100.0
-        manager.startDeviceMotionUpdates(using: .xArbitraryZVertical)
+        manager.startDeviceMotionUpdates(
+            using: .xArbitraryZVertical,
+            to: processingQueue,
+            withHandler: processor.makeDeviceMotionHandler()
+        )
         isRunning = true
-        resetCalibration()
     }
 
     func stop() {
-        manager.stopDeviceMotionUpdates()
         isRunning = false
-        resetCalibration()
+        manager.stopDeviceMotionUpdates()
+        processor.endSession()
     }
 
     func resetCalibration() {
-        referenceAttitude = nil
-        accelerationFilter.reset()
-        elbowPivotFilter.reset()
+        processor.resetCalibration()
+    }
+
+    func resetGestureState(preservingDirection: Bool = true) {
+        processor.resetGestureState(preservingDirection: preservingDirection)
     }
 
     func latestSample() -> MotionSample {
-        guard isRunning, let motion = manager.deviceMotion else {
+        guard isRunning else {
             return .unavailable
         }
+        return processor.latestSample()
+    }
+}
 
-        let attitude = motion.attitude.quaternion.simdQuaternion
-        if referenceAttitude == nil {
-            referenceAttitude = attitude
+/// Core Motion 的回调与渲染循环位于不同线程；所有可变滤波状态都在这个
+/// 小型锁保护对象中处理，主线程只读取完整快照，不会看见半更新的数据。
+private final class MotionSampleProcessor: @unchecked Sendable {
+    private let lock = NSLock()
+    private var acceptsSamples = false
+    private var referenceAttitude: simd_quatf?
+    private var accelerationFilter = MotionSampleFilter()
+    private var shakeDetector = ShakeGestureDetector()
+    private var sample = MotionSample.unavailable
+
+    /// 在非 MainActor 类型的上下文中创建 Core Motion 回调，避免闭包继承
+    /// `MotionController.start()` 的主线程隔离后在专用队列上触发运行时断言。
+    func makeDeviceMotionHandler() -> CMDeviceMotionHandler {
+        { [weak self] motion, _ in
+            guard let self, let motion else { return }
+            process(motion)
         }
-        guard let referenceAttitude else { return .unavailable }
+    }
 
-        // Core Motion 的向量位于当前设备坐标。先回到参考坐标，再旋转到
-        // 启动时的屏幕坐标，使 x/y/z 始终表示首帧的右/上/出屏方向。
-        let deviceToCalibratedScene = simd_normalize(referenceAttitude * attitude.inverse)
-        let measuredAcceleration = deviceToCalibratedScene.act(motion.userAcceleration.simdVector)
-        let gravity = deviceToCalibratedScene.act(motion.gravity.simdVector)
-        let rotationRate = deviceToCalibratedScene.act(motion.rotationRate.simdVector)
-        let pivotToPhoneDirection = deviceToCalibratedScene.act(SIMD3<Float>(0, 1, 0))
-        let filteredAcceleration = accelerationFilter.process(
-            measuredAcceleration,
-            timestamp: motion.timestamp
-        )
-        let assistedAcceleration = elbowPivotFilter.process(
-            measuredAcceleration: filteredAcceleration,
-            rotationRate: rotationRate,
-            pivotToPhoneDirection: pivotToPhoneDirection,
-            timestamp: motion.timestamp
-        )
+    func beginSession() {
+        lock.withLock {
+            acceptsSamples = true
+            resetCalibrationLocked()
+        }
+    }
 
-        return MotionSample(
-            userAcceleration: assistedAcceleration,
-            gravityDirection: gravity,
-            rotationRate: rotationRate,
-            relativeAttitude: deviceToCalibratedScene,
-            timestamp: motion.timestamp,
-            isAvailable: true
-        )
+    func endSession() {
+        lock.withLock {
+            acceptsSamples = false
+            resetCalibrationLocked()
+        }
+    }
+
+    func resetCalibration() {
+        lock.withLock {
+            resetCalibrationLocked()
+        }
+    }
+
+    func resetGestureState(preservingDirection: Bool) {
+        lock.withLock {
+            sample.shakeDrive = shakeDetector.reset(
+                preservingOrbitAxis: preservingDirection
+            )
+        }
+    }
+
+    func latestSample() -> MotionSample {
+        lock.withLock {
+            guard sample.isAvailable,
+                  ProcessInfo.processInfo.systemUptime - sample.timestamp > 0.15 else {
+                return sample
+            }
+
+            var staleSample = sample
+            staleSample.userAcceleration = .zero
+            staleSample.rotationRate = .zero
+            staleSample.shakeDrive = .inactive(
+                orbitAxis: sample.shakeDrive.orbitAxis
+            )
+            return staleSample
+        }
+    }
+
+    func process(_ motion: CMDeviceMotion) {
+        lock.withLock {
+            guard acceptsSamples else { return }
+
+            let attitude = motion.attitude.quaternion.simdQuaternion
+            if referenceAttitude == nil {
+                referenceAttitude = attitude
+            }
+            guard let referenceAttitude else { return }
+
+            // Core Motion 的向量位于当前设备坐标。先回到参考坐标，再旋转到
+            // 启动时的屏幕坐标，使 x/y/z 始终表示首帧的右/上/出屏方向。
+            let deviceToCalibratedScene = simd_normalize(referenceAttitude * attitude.inverse)
+            let measuredAcceleration = deviceToCalibratedScene.act(
+                motion.userAcceleration.simdVector
+            )
+            let gravity = deviceToCalibratedScene.act(motion.gravity.simdVector)
+            let rotationRate = deviceToCalibratedScene.act(motion.rotationRate.simdVector)
+            let filteredAcceleration = accelerationFilter.process(
+                measuredAcceleration,
+                timestamp: motion.timestamp
+            )
+            let shakeDrive = shakeDetector.process(
+                acceleration: measuredAcceleration,
+                rotationRate: rotationRate,
+                timestamp: motion.timestamp
+            )
+
+            sample = MotionSample(
+                userAcceleration: filteredAcceleration,
+                gravityDirection: gravity,
+                rotationRate: rotationRate,
+                relativeAttitude: deviceToCalibratedScene,
+                shakeDrive: shakeDrive,
+                timestamp: motion.timestamp,
+                isAvailable: true
+            )
+        }
+    }
+
+    private func resetCalibrationLocked() {
+        referenceAttitude = nil
+        accelerationFilter.reset()
+        shakeDetector.reset()
+        sample = .unavailable
     }
 }
 

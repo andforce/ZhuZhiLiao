@@ -200,6 +200,7 @@ final class ToySimulationTests: XCTestCase {
     func testStraightAlternatingShakeDoesNotCountARevolution() {
         var simulation = ToySimulation(configuration: .testing)
         var completedWahs = 0
+        var maximumActivity: Float = 0
 
         for frameIndex in 0..<600 {
             let direction: Float = frameIndex.isMultiple(of: 2) ? 1 : -1
@@ -208,13 +209,16 @@ final class ToySimulationTests: XCTestCase {
                 gravityDirection: SIMD3<Float>(0, -1, 0),
                 rotationRate: .zero
             )
-            completedWahs += simulation.advance(
+            let frame = simulation.advance(
                 input: input,
                 deltaTime: 1.0 / 120.0
-            ).completedWahs
+            )
+            completedWahs += frame.completedWahs
+            maximumActivity = max(maximumActivity, frame.state.activity)
         }
 
         XCTAssertEqual(completedWahs, 0)
+        XCTAssertLessThan(maximumActivity, 0.05)
     }
 
     func testStationaryInputDoesNotFalseCountOverSixtySeconds() {
@@ -235,5 +239,195 @@ final class ToySimulationTests: XCTestCase {
 
         XCTAssertEqual(completedWahs, 0)
         XCTAssertLessThan(simulation.state.activity, 0.01)
+    }
+
+    func testActiveShakeDriveAlongEveryAxisSettlesIntoAudibleOrbit() {
+        for axis in [
+            SIMD3<Float>(1, 0, 0),
+            SIMD3<Float>(0, 1, 0),
+            SIMD3<Float>(0, 0, -1)
+        ] {
+            var configuration = ToyPhysicsConfiguration.live
+            configuration.gravityMagnitude = 0
+            configuration.motionAccelerationScale = 0
+            var simulation = ToySimulation(configuration: configuration)
+            let input = MotionInput(
+                anchorAcceleration: .zero,
+                gravityDirection: .zero,
+                rotationRate: .zero,
+                shakeDrive: ShakeDrive(
+                    intensity: 0.65,
+                    isActive: true,
+                    orbitAxis: axis,
+                    directionConfidence: 1
+                )
+            )
+            var completedWahs = 0
+            var earlyActivity: Float = 0
+
+            for frameIndex in 0..<(4 * 120) {
+                let frame = simulation.advance(input: input, deltaTime: 1.0 / 120.0)
+                completedWahs += frame.completedWahs
+                if frameIndex == 12 {
+                    earlyActivity = frame.state.activity
+                }
+            }
+
+            XCTAssertLessThan(earlyActivity, 0.02, "axis: \(axis)")
+            XCTAssertGreaterThan(simulation.state.orbitCoherence, 0.60, "axis: \(axis)")
+            XCTAssertGreaterThan(simulation.state.activity, 0.05, "axis: \(axis)")
+            XCTAssertGreaterThan(completedWahs, 0, "axis: \(axis)")
+        }
+    }
+
+    func testShakeDriveIsFrameRateIndependent() {
+        var configuration = ToyPhysicsConfiguration.live
+        configuration.gravityMagnitude = 0
+        configuration.motionAccelerationScale = 0
+        var sixtyFPS = ToySimulation(configuration: configuration)
+        var oneTwentyFPS = ToySimulation(configuration: configuration)
+        let input = MotionInput(
+            anchorAcceleration: .zero,
+            gravityDirection: .zero,
+            rotationRate: .zero,
+            shakeDrive: ShakeDrive(
+                intensity: 0.55,
+                isActive: true,
+                orbitAxis: SIMD3<Float>(0, 0, -1),
+                directionConfidence: 1
+            )
+        )
+
+        for _ in 0..<(2 * 60) {
+            _ = sixtyFPS.advance(input: input, deltaTime: 1.0 / 60.0)
+        }
+        for _ in 0..<(2 * 120) {
+            _ = oneTwentyFPS.advance(input: input, deltaTime: 1.0 / 120.0)
+        }
+
+        XCTAssertEqual(sixtyFPS.state.position.x, oneTwentyFPS.state.position.x, accuracy: 0.003)
+        XCTAssertEqual(sixtyFPS.state.position.y, oneTwentyFPS.state.position.y, accuracy: 0.003)
+        XCTAssertEqual(sixtyFPS.state.velocity.x, oneTwentyFPS.state.velocity.x, accuracy: 0.003)
+        XCTAssertEqual(sixtyFPS.state.velocity.y, oneTwentyFPS.state.velocity.y, accuracy: 0.003)
+        XCTAssertEqual(
+            sixtyFPS.state.orbitCoherence,
+            oneTwentyFPS.state.orbitCoherence,
+            accuracy: 0.002
+        )
+    }
+
+    func testStoppingShakeRemovesAssistAndLetsSoundDecay() {
+        var configuration = ToyPhysicsConfiguration.live
+        configuration.gravityMagnitude = 0
+        configuration.motionAccelerationScale = 0
+        var simulation = ToySimulation(configuration: configuration)
+        let activeInput = MotionInput(
+            anchorAcceleration: .zero,
+            gravityDirection: .zero,
+            rotationRate: .zero,
+            shakeDrive: ShakeDrive(
+                intensity: 0.70,
+                isActive: true,
+                orbitAxis: SIMD3<Float>(0, 0, -1),
+                directionConfidence: 1
+            )
+        )
+
+        for _ in 0..<(3 * 120) {
+            _ = simulation.advance(input: activeInput, deltaTime: 1.0 / 120.0)
+        }
+        let activeRPS = simd_length(simulation.state.angularVelocity) / (2 * .pi)
+        let activeActivity = simulation.state.activity
+
+        for _ in 0..<(4 * 120) {
+            _ = simulation.advance(input: .zero, deltaTime: 1.0 / 120.0)
+        }
+        let restingRPS = simd_length(simulation.state.angularVelocity) / (2 * .pi)
+
+        XCTAssertGreaterThan(activeActivity, 0.05)
+        XCTAssertLessThan(restingRPS, activeRPS)
+        XCTAssertLessThan(simulation.state.activity, activeActivity)
+    }
+
+    func testChangingDriveDirectionResetsCoherenceAndMutesSound() {
+        var configuration = ToyPhysicsConfiguration.live
+        configuration.gravityMagnitude = 0
+        configuration.motionAccelerationScale = 0
+        var simulation = ToySimulation(configuration: configuration)
+        var input = MotionInput(
+            anchorAcceleration: .zero,
+            gravityDirection: .zero,
+            rotationRate: .zero,
+            shakeDrive: ShakeDrive(
+                intensity: 0.70,
+                isActive: true,
+                orbitAxis: SIMD3<Float>(0, 0, -1),
+                directionConfidence: 1
+            )
+        )
+
+        for _ in 0..<(3 * 120) {
+            _ = simulation.advance(input: input, deltaTime: 1.0 / 120.0)
+        }
+        XCTAssertGreaterThan(simulation.state.activity, 0.05)
+
+        input.shakeDrive.orbitAxis = SIMD3<Float>(0, 0, 1)
+        _ = simulation.advance(input: input, deltaTime: 1.0 / 120.0)
+
+        XCTAssertLessThan(simulation.state.orbitCoherence, 0.05)
+        XCTAssertLessThan(simulation.state.activity, 0.01)
+    }
+
+    func testPointerReleaseTargetRecentersAnchor() {
+        var simulation = ToySimulation(configuration: .inertialTesting)
+        let draggedInput = MotionInput(
+            anchorAcceleration: .zero,
+            gravityDirection: .zero,
+            rotationRate: .zero,
+            anchorTarget: SIMD3<Float>(0.8, -0.3, 0)
+        )
+
+        for _ in 0..<30 {
+            _ = simulation.advance(input: draggedInput, deltaTime: 1.0 / 120.0)
+        }
+        XCTAssertGreaterThan(simd_length(simulation.state.anchorOffset), 0.2)
+
+        var releasedInput = MotionInput.zero
+        releasedInput.anchorTarget = .zero
+        for _ in 0..<60 {
+            _ = simulation.advance(input: releasedInput, deltaTime: 1.0 / 120.0)
+        }
+
+        XCTAssertLessThan(simd_length(simulation.state.anchorOffset), 0.001)
+    }
+
+    func testCircularPointerFallbackStillProducesSoundAndCounts() {
+        var simulation = ToySimulation(configuration: .live)
+        var phase: Float = 0
+        var completedWahs = 0
+        let deltaTime: Float = 1.0 / 120.0
+        let radius = simulation.state.ropeLength * (Float(13) / Float(28))
+
+        for _ in 0..<(4 * 120) {
+            phase += 3.4 * deltaTime * 2 * .pi
+            let input = MotionInput(
+                anchorAcceleration: .zero,
+                gravityDirection: SIMD3<Float>(0, -1, 0),
+                rotationRate: .zero,
+                anchorTarget: SIMD3<Float>(
+                    cos(phase) * radius,
+                    sin(phase) * radius,
+                    0
+                )
+            )
+            completedWahs += simulation.advance(
+                input: input,
+                deltaTime: TimeInterval(deltaTime)
+            ).completedWahs
+        }
+
+        XCTAssertGreaterThan(simulation.state.orbitCoherence, 0.60)
+        XCTAssertGreaterThan(simulation.state.activity, 0.05)
+        XCTAssertGreaterThan(completedWahs, 0)
     }
 }

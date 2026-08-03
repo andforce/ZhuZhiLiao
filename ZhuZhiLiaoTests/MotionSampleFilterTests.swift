@@ -48,104 +48,246 @@ final class MotionSampleFilterTests: XCTestCase {
         XCTAssertEqual(repeated, first)
     }
 
-    func testElbowPivotFilterKeepsMeasuredAccelerationWhenPhoneIsStill() {
-        var filter = ElbowPivotMotionFilter(configuration: .live)
-        let measured = SIMD3<Float>(0.2, -0.1, 0.05)
+    func testRepeatedShakesAlongEveryAxisActivateDrive() {
+        for axis in [
+            SIMD3<Float>(1, 0, 0),
+            SIMD3<Float>(0, 1, 0),
+            SIMD3<Float>(0, 0, 1)
+        ] {
+            var detector = ShakeGestureDetector()
+            let result = driveSineShake(
+                detector: &detector,
+                axis: axis,
+                amplitude: 0.45,
+                frequency: 3,
+                duration: 0.8
+            )
 
-        let output = filter.process(
-            measuredAcceleration: measured,
+            XCTAssertTrue(result.drive.isActive, "axis: \(axis)")
+            XCTAssertGreaterThan(result.maximumIntensity, 0.05, "axis: \(axis)")
+            XCTAssertEqual(result.drive.orbitAxis.z, -1, accuracy: 0.000_1)
+        }
+    }
+
+    func testCircularShakeActivatesAndInfersRotationAxis() {
+        var detector = ShakeGestureDetector()
+        var drive = ShakeDrive.inactive
+        let step = 0.01
+
+        for index in 0...80 {
+            let time = Double(index) * step
+            let phase = Float(time * 3 * 2 * .pi)
+            drive = detector.process(
+                acceleration: SIMD3<Float>(cos(phase), sin(phase), 0) * 0.45,
+                rotationRate: .zero,
+                timestamp: time
+            )
+        }
+
+        XCTAssertTrue(drive.isActive)
+        XCTAssertGreaterThan(drive.orbitAxis.z, 0.9)
+        XCTAssertGreaterThan(drive.directionConfidence, 0)
+    }
+
+    func testStrongerShakeProducesMoreDriveIntensity() {
+        var gentleDetector = ShakeGestureDetector()
+        var strongDetector = ShakeGestureDetector()
+
+        let gentle = driveSineShake(
+            detector: &gentleDetector,
+            axis: SIMD3<Float>(1, 0, 0),
+            amplitude: 0.30,
+            frequency: 2.5,
+            duration: 0.8
+        )
+        let strong = driveSineShake(
+            detector: &strongDetector,
+            axis: SIMD3<Float>(1, 0, 0),
+            amplitude: 0.85,
+            frequency: 3.5,
+            duration: 0.8
+        )
+
+        XCTAssertGreaterThan(strong.maximumIntensity, gentle.maximumIntensity)
+    }
+
+    func testStationaryNoiseSingleImpulseAndWalkingDoNotActivate() {
+        var noiseDetector = ShakeGestureDetector()
+        var impulseDetector = ShakeGestureDetector()
+        var walkingDetector = ShakeGestureDetector()
+        var noiseDrive = ShakeDrive.inactive
+        var impulseDrive = ShakeDrive.inactive
+        var walkingDrive = ShakeDrive.inactive
+
+        for index in 0...100 {
+            let time = Double(index) * 0.01
+            let phase = Float(time * 2 * .pi)
+            noiseDrive = noiseDetector.process(
+                acceleration: SIMD3<Float>(sin(phase), cos(phase), 0) * 0.015,
+                rotationRate: .zero,
+                timestamp: time
+            )
+            walkingDrive = walkingDetector.process(
+                acceleration: SIMD3<Float>(0, sin(phase * 1.7), 0) * 0.16,
+                rotationRate: .zero,
+                timestamp: time
+            )
+
+            let impulse: SIMD3<Float>
+            switch index {
+            case 20..<25:
+                impulse = SIMD3<Float>(0.8, 0, 0)
+            case 25..<30:
+                impulse = SIMD3<Float>(-0.8, 0, 0)
+            default:
+                impulse = .zero
+            }
+            impulseDrive = impulseDetector.process(
+                acceleration: impulse,
+                rotationRate: .zero,
+                timestamp: time
+            )
+        }
+
+        XCTAssertFalse(noiseDrive.isActive)
+        XCTAssertFalse(walkingDrive.isActive)
+        XCTAssertFalse(impulseDrive.isActive)
+    }
+
+    func testDriveStopsAndIntensityDecaysAfterInputBecomesIdle() {
+        var detector = ShakeGestureDetector()
+        let active = driveSineShake(
+            detector: &detector,
+            axis: SIMD3<Float>(1, 0, 0),
+            amplitude: 0.55,
+            frequency: 3,
+            duration: 0.8
+        ).drive
+        var drive = active
+
+        for index in 1...70 {
+            drive = detector.process(
+                acceleration: .zero,
+                rotationRate: .zero,
+                timestamp: 0.8 + Double(index) * 0.01
+            )
+        }
+
+        XCTAssertTrue(active.isActive)
+        XCTAssertFalse(drive.isActive)
+        XCTAssertLessThan(drive.intensity, active.intensity)
+    }
+
+    func testActiveDirectionIgnoresBriefOppositeEvidenceButAcceptsSustainedReversal() {
+        var detector = ShakeGestureDetector()
+        var drive = circularShake(
+            detector: &detector,
+            direction: 1,
+            startTime: 0,
+            duration: 0.8
+        )
+        XCTAssertGreaterThan(drive.orbitAxis.z, 0.9)
+
+        drive = detector.process(
+            acceleration: SIMD3<Float>(0.45, 0, 0),
+            rotationRate: SIMD3<Float>(0, 0, -2),
+            timestamp: 0.81
+        )
+        XCTAssertGreaterThan(drive.orbitAxis.z, 0.9)
+
+        for index in 1...36 {
+            let direction: Float = index.isMultiple(of: 6) ? -1 : 1
+            drive = detector.process(
+                acceleration: SIMD3<Float>(direction * 0.45, 0, 0),
+                rotationRate: SIMD3<Float>(0, 0, -2),
+                timestamp: 0.81 + Double(index) * 0.01
+            )
+        }
+
+        XCTAssertLessThan(drive.orbitAxis.z, -0.9)
+    }
+
+    func testResetCanPreserveLastInferredDirection() {
+        var detector = ShakeGestureDetector()
+        let drive = circularShake(
+            detector: &detector,
+            direction: 1,
+            startTime: 0,
+            duration: 0.8
+        )
+
+        let resetDrive = detector.reset(preservingOrbitAxis: true)
+
+        XCTAssertFalse(resetDrive.isActive)
+        XCTAssertEqual(resetDrive.orbitAxis.x, drive.orbitAxis.x, accuracy: 0.000_1)
+        XCTAssertEqual(resetDrive.orbitAxis.y, drive.orbitAxis.y, accuracy: 0.000_1)
+        XCTAssertEqual(resetDrive.orbitAxis.z, drive.orbitAxis.z, accuracy: 0.000_1)
+    }
+
+    func testShakeDetectorDoesNotProcessRepeatedTimestampTwice() {
+        var detector = ShakeGestureDetector()
+        _ = detector.process(
+            acceleration: .zero,
             rotationRate: .zero,
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
             timestamp: 1
         )
-
-        XCTAssertEqual(output, measured)
-    }
-
-    func testSteadyElbowRotationAddsCentripetalAccelerationTowardPivot() {
-        var configuration = ElbowPivotMotionConfiguration.live
-        configuration.angularSpeedDeadZone = 0
-        configuration.smoothingFactor = 1
-        var filter = ElbowPivotMotionFilter(configuration: configuration)
-
-        let output = filter.process(
-            measuredAcceleration: .zero,
-            rotationRate: SIMD3<Float>(0, 0, 4),
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
-            timestamp: 1
-        )
-
-        XCTAssertEqual(output.x, 0, accuracy: 0.000_1)
-        XCTAssertLessThan(output.y, -0.4)
-        XCTAssertEqual(output.z, 0, accuracy: 0.000_1)
-    }
-
-    func testClockwiseAndCounterclockwiseCirclesReceiveEqualAssistance() {
-        var configuration = ElbowPivotMotionConfiguration.live
-        configuration.angularSpeedDeadZone = 0
-        configuration.smoothingFactor = 1
-        var clockwiseFilter = ElbowPivotMotionFilter(configuration: configuration)
-        var counterclockwiseFilter = ElbowPivotMotionFilter(configuration: configuration)
-
-        let clockwise = clockwiseFilter.process(
-            measuredAcceleration: .zero,
-            rotationRate: SIMD3<Float>(0, 0, -4),
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
-            timestamp: 1
-        )
-        let counterclockwise = counterclockwiseFilter.process(
-            measuredAcceleration: .zero,
-            rotationRate: SIMD3<Float>(0, 0, 4),
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
-            timestamp: 1
-        )
-
-        XCTAssertEqual(clockwise.x, counterclockwise.x, accuracy: 0.000_1)
-        XCTAssertEqual(clockwise.y, counterclockwise.y, accuracy: 0.000_1)
-        XCTAssertEqual(clockwise.z, counterclockwise.z, accuracy: 0.000_1)
-    }
-
-    func testIncreasingElbowRotationAddsTangentialAcceleration() {
-        var configuration = ElbowPivotMotionConfiguration.live
-        configuration.angularSpeedDeadZone = 0
-        configuration.smoothingFactor = 1
-        var filter = ElbowPivotMotionFilter(configuration: configuration)
-
-        _ = filter.process(
-            measuredAcceleration: .zero,
+        let first = detector.process(
+            acceleration: SIMD3<Float>(0.8, 0, 0),
             rotationRate: .zero,
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
-            timestamp: 1
+            timestamp: 1.01
         )
-        let output = filter.process(
-            measuredAcceleration: .zero,
-            rotationRate: SIMD3<Float>(0, 0, 0.1),
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
+        let repeated = detector.process(
+            acceleration: SIMD3<Float>(-0.8, 0, 0),
+            rotationRate: SIMD3<Float>(0, 0, 3),
             timestamp: 1.01
         )
 
-        XCTAssertLessThan(output.x, -0.2)
+        XCTAssertEqual(repeated, first)
     }
 
-    func testElbowPivotFilterDoesNotIntegrateRepeatedSensorSample() {
-        var configuration = ElbowPivotMotionConfiguration.live
-        configuration.angularSpeedDeadZone = 0
-        configuration.smoothingFactor = 0.25
-        var filter = ElbowPivotMotionFilter(configuration: configuration)
+    private func driveSineShake(
+        detector: inout ShakeGestureDetector,
+        axis: SIMD3<Float>,
+        amplitude: Float,
+        frequency: Float,
+        duration: TimeInterval,
+        startTime: TimeInterval = 0
+    ) -> (drive: ShakeDrive, maximumIntensity: Float) {
+        var drive = ShakeDrive.inactive
+        var maximumIntensity: Float = 0
+        let sampleCount = Int(duration * 100)
 
-        let first = filter.process(
-            measuredAcceleration: .zero,
-            rotationRate: SIMD3<Float>(0, 0, 4),
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
-            timestamp: 1
-        )
-        let repeated = filter.process(
-            measuredAcceleration: .zero,
-            rotationRate: SIMD3<Float>(0, 0, 4),
-            pivotToPhoneDirection: SIMD3<Float>(0, 1, 0),
-            timestamp: 1
-        )
+        for index in 0...sampleCount {
+            let time = startTime + Double(index) * 0.01
+            let phase = Float((time - startTime) * Double(frequency) * 2 * .pi)
+            drive = detector.process(
+                acceleration: axis * (sin(phase) * amplitude),
+                rotationRate: .zero,
+                timestamp: time
+            )
+            maximumIntensity = max(maximumIntensity, drive.intensity)
+        }
+        return (drive, maximumIntensity)
+    }
 
-        XCTAssertEqual(repeated, first)
+    private func circularShake(
+        detector: inout ShakeGestureDetector,
+        direction: Float,
+        startTime: TimeInterval,
+        duration: TimeInterval
+    ) -> ShakeDrive {
+        var drive = ShakeDrive.inactive
+        let sampleCount = Int(duration * 100)
+        for index in 0...sampleCount {
+            let time = startTime + Double(index) * 0.01
+            let phase = direction
+                * Float((time - startTime) * 3 * 2 * .pi)
+            drive = detector.process(
+                acceleration: SIMD3<Float>(cos(phase), sin(phase), 0) * 0.45,
+                rotationRate: .zero,
+                timestamp: time
+            )
+        }
+        return drive
     }
 }
