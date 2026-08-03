@@ -247,8 +247,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         let cordRed = SIMD4<Float>(0.74, 0.16, 0.075, 1)
         let ink = SIMD4<Float>(0.018, 0.014, 0.012, 1)
 
-        let shaftStart = sceneAnchor + SIMD3<Float>(0.035, -0.055, -0.035)
-        let shaftEnd = sceneAnchor + SIMD3<Float>(0.58, -1.55, -0.10)
+        let shaftStart = sceneAnchor + SIMD3<Float>(0, -0.055, 0)
+        let shaftEnd = sceneAnchor + SIMD3<Float>(0, -1.55, 0)
         let shaftDirection = simd_normalize(shaftEnd - shaftStart)
         draw(
             mesh: cylinder,
