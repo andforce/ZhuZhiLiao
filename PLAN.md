@@ -1,0 +1,32 @@
+# 竹知了 iOS 原生版实施计划
+
+## 目标
+
+构建完全原生的 iPhone 版“竹知了”：SwiftUI 管理界面与生命周期，Metal 渲染水墨夜景和程序化 3D 玩具，Core Motion 三轴数据驱动三维绳系物理，AVAudioEngine 驱动真实录音，并复用现有全球计数服务。应用不使用 WKWebView、HTML、JavaScript、Three.js、SceneKit 或 RealityKit。
+
+## 实现范围
+
+- iOS 17+、iPhone only、竖屏、简体中文，Bundle ID 为 `com.azhegezhege.zhuzhiliao`。
+- 使用 `.xArbitraryZVertical`、100Hz Core Motion 更新、首帧姿态校准、三轴滤波和本地处理。
+- 使用 `1/240s` 固定步长的三维绳系质点物理；转轴和方向来自 `cross(position, velocity)`。
+- 使用 MTKView 的 60/120FPS 绘制循环、深度缓冲、MSAA、程序化模型、动态绳子和粒子。
+- 使用 AVAudioPlayerNode、AVAudioUnitVarispeed 和真实 AAC 循环，根据转速驱动速度、音高和音量。
+- 使用 URLSessionWebSocketTask 复用 `/api/ws` 协议；只上传随机 UID 和计圈数，不上传动作数据。
+- 保留自动甩作为模拟器、演示和无障碍兜底。
+
+## 交付顺序
+
+1. 建立工程、权限、生命周期和测试目标。
+2. 测试驱动实现动作滤波、三维物理、角速度和计圈。
+3. 完成 Metal 背景、程序化竹知了、绳子、轨迹和粒子。
+4. 接入真实录音、统计服务和离线降级。
+5. 完成模拟器构建、单元测试、真机手感验证、性能检查和 TestFlight 准备。
+
+## 验收标准
+
+- 顺时针、逆时针和前后运动产生正确的三维轨道。
+- 静置不持续漂移、误发声或误计圈，随机直线抖动不算完整圈。
+- 60Hz 与 120Hz 渲染下物理结果一致。
+- 网络和音频中断可恢复，断网时本地玩法不受影响。
+- 60FPS 设备帧耗时低于 16.7ms，真机无 Metal 验证错误或持续资源分配。
+
