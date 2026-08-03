@@ -6,7 +6,7 @@ import UIKit
 final class ExperienceCoordinator: ObservableObject {
     @Published private(set) var revolutionsPerSecond: Float = 0
     @Published private(set) var activity: Float = 0
-    @Published private(set) var stats = CounterStats(online: 0, visitors: 0, visits: 0, wahs: 0)
+    @Published private(set) var stats = CounterStats(online: 0, wahs: 0)
     @Published private(set) var personalWahs = 0
     @Published private(set) var motionIsAvailable = false
     @Published private(set) var isRunning = false

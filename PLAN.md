@@ -12,7 +12,7 @@
 - 全屏触摸（含模拟器鼠标）复刻网页杆梢追随：移动的是竹签锚点，竹筒保留惯性，绳子只拉不推。
 - 使用 MTKView 的 60/120FPS 绘制循环、深度缓冲、MSAA、程序化模型、动态绳子和粒子。
 - 使用 AVAudioPlayerNode、AVAudioUnitVarispeed 和真实 AAC 循环，根据转速驱动速度、音高和音量。
-- 使用 URLSessionWebSocketTask 复用 `/api/ws` 协议；只上传随机 UID 和计圈数，不上传动作数据。
+- 使用 URLSessionWebSocketTask 连接自有服务 `/api/ws`；只上传新增圈数，不上传设备标识、个人累计或动作数据。
 - 保留自动甩作为模拟器、演示和无障碍兜底。
 
 ## 交付顺序

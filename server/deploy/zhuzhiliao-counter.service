@@ -1,0 +1,33 @@
+[Unit]
+Description=ZhuZhiLiao realtime counter service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=zhuzhiliao
+Group=zhuzhiliao
+WorkingDirectory=/opt/zhuzhiliao-counter
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3210
+Environment=SQLITE_PATH=/var/lib/zhuzhiliao-counter/counter.sqlite
+EnvironmentFile=-/etc/zhuzhiliao-counter.env
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+StateDirectory=zhuzhiliao-counter
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
