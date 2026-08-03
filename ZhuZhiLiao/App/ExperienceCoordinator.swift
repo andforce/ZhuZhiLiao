@@ -10,7 +10,7 @@ final class ExperienceCoordinator: ObservableObject {
     @Published private(set) var personalWahs = 0
     @Published private(set) var motionIsAvailable = false
     @Published private(set) var isRunning = false
-    @Published var automaticMode = false
+    private var automaticMode = false
 
     private let motionController: MotionController
     private let audioEngine: ToyAudioEngine
@@ -82,18 +82,6 @@ final class ExperienceCoordinator: ObservableObject {
             resetSimulation(gravityDirection: SIMD3<Float>(0, -1, 0))
             awaitingCalibratedGravity = false
         } else {
-            awaitingCalibratedGravity = true
-        }
-    }
-
-    func toggleAutomaticMode() {
-        automaticMode.toggle()
-        automaticPhase = 0
-        if automaticMode {
-            resetSimulation(gravityDirection: SIMD3<Float>(0, -1, 0))
-            awaitingCalibratedGravity = false
-        } else {
-            motionController.resetCalibration()
             awaitingCalibratedGravity = true
         }
     }

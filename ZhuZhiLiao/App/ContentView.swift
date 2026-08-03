@@ -102,26 +102,8 @@ struct ContentView: View {
 
     private var bottomHUD: some View {
         VStack(spacing: 14) {
-            HStack(alignment: .bottom, spacing: 18) {
-                speedReadout
-
-                Spacer(minLength: 12)
-
-                Button {
-                    coordinator.toggleAutomaticMode()
-                } label: {
-                    Label(
-                        coordinator.automaticMode ? "回到手摇" : "自动演示",
-                        systemImage: coordinator.automaticMode ? "hand.raised" : "play.fill"
-                    )
-                }
-                .buttonStyle(DemoButtonStyle(isActive: coordinator.automaticMode))
-                .accessibilityHint(
-                    coordinator.automaticMode
-                        ? "停止自动演示，恢复用动作控制"
-                        : "不用摇手机也能查看竹知了转动"
-                )
-            }
+            speedReadout
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             instructionPanel
             statistics
@@ -182,17 +164,13 @@ struct ContentView: View {
     }
 
     private var instructionTitle: String {
-        if coordinator.automaticMode {
-            return "正在自动演示"
-        }
         return coordinator.motionIsAvailable ? "以手肘为轴，让前臂画小圆" : "动作传感器不可用"
     }
 
     private var instructionDetail: String {
-        if coordinator.automaticMode {
-            return "轻点右侧按钮，可回到手摇"
-        }
-        return coordinator.motionIsAvailable ? "沿同一方向连续转动 · 顺时针或逆时针均可" : "请使用自动演示查看转动"
+        return coordinator.motionIsAvailable
+            ? "沿同一方向连续转动 · 顺时针或逆时针均可"
+            : "当前设备将自动播放转动效果"
     }
 
     private var statistics: some View {
@@ -462,34 +440,6 @@ private struct CalibrationButtonStyle: ButtonStyle {
                 Capsule().stroke(.white.opacity(0.14), lineWidth: 0.75)
             }
             .contentShape(Capsule())
-    }
-}
-
-private struct DemoButtonStyle: ButtonStyle {
-    let isActive: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(.subheadline, design: .default, weight: .semibold))
-            .foregroundStyle(.white.opacity(configuration.isPressed ? 0.68 : 0.94))
-            .padding(.horizontal, 18)
-            .frame(minWidth: 126, minHeight: 48)
-            .background(
-                isActive
-                    ? Color(red: 0.61, green: 0.09, blue: 0.045)
-                    : Color.black.opacity(0.35),
-                in: Capsule()
-            )
-            .overlay {
-                Capsule().stroke(
-                    isActive
-                        ? Color(red: 0.94, green: 0.42, blue: 0.24).opacity(0.58)
-                        : Color.white.opacity(0.14),
-                    lineWidth: 0.8
-                )
-            }
-            .scaleEffect(configuration.isPressed ? 0.975 : 1)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
 
