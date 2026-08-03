@@ -3,9 +3,11 @@ import SwiftUI
 
 struct MetalSurface: UIViewRepresentable {
     let coordinator: ExperienceCoordinator
+    let theme: SeasonTheme
+    let animateThemeChanges: Bool
 
     func makeCoordinator() -> MetalRenderer {
-        MetalRenderer(coordinator: coordinator)
+        MetalRenderer(coordinator: coordinator, theme: theme)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -15,6 +17,7 @@ struct MetalSurface: UIViewRepresentable {
     }
 
     func updateUIView(_ view: MTKView, context: Context) {
+        context.coordinator.setTheme(theme, animated: animateThemeChanges)
         if view.delegate == nil {
             context.coordinator.configure(view)
         }
@@ -25,4 +28,3 @@ struct MetalSurface: UIViewRepresentable {
         view.delegate = nil
     }
 }
-

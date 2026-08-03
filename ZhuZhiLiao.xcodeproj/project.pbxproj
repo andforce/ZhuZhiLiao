@@ -32,6 +32,12 @@
 		C36D6ABDD40E44DDBE49EC9A /* MotionSampleFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA4F205DBB136C692D9B87C /* MotionSampleFilterTests.swift */; };
 		C879664EB9EA6773D56E99CC /* ToySimulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF9E4CE0A33ADC081A891C6A /* ToySimulation.swift */; };
 		C91158065EC8B647A0CCF75E /* ExperienceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF143CF9EB5830A32607B531 /* ExperienceCoordinator.swift */; };
+		D10000000000000000000001 /* ExperienceHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000001 /* ExperienceHUD.swift */; };
+		D10000000000000000000002 /* SafetyIntroduction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000002 /* SafetyIntroduction.swift */; };
+		D10000000000000000000003 /* SeasonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000003 /* SeasonTheme.swift */; };
+		D10000000000000000000004 /* SeasonalGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000004 /* SeasonalGlass.swift */; };
+		D10000000000000000000005 /* ThemePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000005 /* ThemePickerView.swift */; };
+		D10000000000000000000006 /* SeasonThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000006 /* SeasonThemeTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +79,12 @@
 		F7B81477869B1CE66698D7BD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		FC6C4AB2C3747172AA234C77 /* MotionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionController.swift; sourceTree = "<group>"; };
 		FFC69EE99F7D36A13150BC17 /* RenderSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderSnapshot.swift; sourceTree = "<group>"; };
+		D20000000000000000000001 /* ExperienceHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperienceHUD.swift; sourceTree = "<group>"; };
+		D20000000000000000000002 /* SafetyIntroduction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyIntroduction.swift; sourceTree = "<group>"; };
+		D20000000000000000000003 /* SeasonTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonTheme.swift; sourceTree = "<group>"; };
+		D20000000000000000000004 /* SeasonalGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonalGlass.swift; sourceTree = "<group>"; };
+		D20000000000000000000005 /* ThemePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePickerView.swift; sourceTree = "<group>"; };
+		D20000000000000000000006 /* SeasonThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonThemeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -149,6 +161,7 @@
 				1339F89C9DB3E1244702245D /* CounterCodecTests.swift */,
 				4EA4F205DBB136C692D9B87C /* MotionSampleFilterTests.swift */,
 				1C8F2FF197D0D52D002B9885 /* OrbitCounterTests.swift */,
+				D20000000000000000000006 /* SeasonThemeTests.swift */,
 				AD2C879534D119ECFEE6D448 /* ToySimulationTests.swift */,
 				CBFE12B2709D13F3D4B0B18E /* WahOutboxTests.swift */,
 			);
@@ -185,6 +198,11 @@
 			children = (
 				3CC88CB70B0B26E0E40C92A2 /* ContentView.swift */,
 				AF143CF9EB5830A32607B531 /* ExperienceCoordinator.swift */,
+				D20000000000000000000001 /* ExperienceHUD.swift */,
+				D20000000000000000000002 /* SafetyIntroduction.swift */,
+				D20000000000000000000003 /* SeasonTheme.swift */,
+				D20000000000000000000004 /* SeasonalGlass.swift */,
+				D20000000000000000000005 /* ThemePickerView.swift */,
 				0FB32B89136CB0CC426F50DC /* ZhuZhiLiaoApp.swift */,
 			);
 			path = App;
@@ -279,6 +297,7 @@
 				A8152964A46D4751C613073D /* CounterCodecTests.swift in Sources */,
 				C36D6ABDD40E44DDBE49EC9A /* MotionSampleFilterTests.swift in Sources */,
 				B40D27ABF46D1EA3F6727AE0 /* OrbitCounterTests.swift in Sources */,
+				D10000000000000000000006 /* SeasonThemeTests.swift in Sources */,
 				2FB859F329436C46F088E105 /* ToySimulationTests.swift in Sources */,
 				1F1B9BAD7C897C64D47296EF /* WahOutboxTests.swift in Sources */,
 			);
@@ -292,6 +311,7 @@
 				020847E398F2A9D38A2720DB /* CounterCodec.swift in Sources */,
 				17619AAA8C32B3F58CAA4125 /* CounterService.swift in Sources */,
 				C91158065EC8B647A0CCF75E /* ExperienceCoordinator.swift in Sources */,
+				D10000000000000000000001 /* ExperienceHUD.swift in Sources */,
 				444F16515F0614D1139B879A /* MatrixMath.swift in Sources */,
 				997BBC4085E8ADFD7D4416D7 /* MeshGenerator.swift in Sources */,
 				4324C25CA6E8E2988AAC1CB7 /* MetalRenderer.swift in Sources */,
@@ -300,7 +320,11 @@
 				85D24223A6DAB41B473ECAAE /* MotionSampleFilter.swift in Sources */,
 				B5350D5475F7D69F242F02C8 /* OrbitCounter.swift in Sources */,
 				595E619532C58851ECED417A /* RenderSnapshot.swift in Sources */,
+				D10000000000000000000002 /* SafetyIntroduction.swift in Sources */,
+				D10000000000000000000003 /* SeasonTheme.swift in Sources */,
+				D10000000000000000000004 /* SeasonalGlass.swift in Sources */,
 				70623662CCC47FD67528C148 /* Shaders.metal in Sources */,
+				D10000000000000000000005 /* ThemePickerView.swift in Sources */,
 				929AA2BD94E2EFDD87E11EA3 /* ToyAudioEngine.swift in Sources */,
 				C879664EB9EA6773D56E99CC /* ToySimulation.swift in Sources */,
 				4C1619F1DEDB2B6189743AED /* WahOutbox.swift in Sources */,

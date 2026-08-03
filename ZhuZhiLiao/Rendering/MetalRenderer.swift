@@ -6,6 +6,19 @@ private struct BackgroundUniforms {
     var viewportSize: SIMD2<Float>
     var time: Float
     var activity: Float
+    var sourceSkyTop: SIMD4<Float>
+    var sourceSkyMiddle: SIMD4<Float>
+    var sourceSkyBottom: SIMD4<Float>
+    var sourceAtmosphere: SIMD4<Float>
+    var sourceAccent: SIMD4<Float>
+    var sourceSilhouette: SIMD4<Float>
+    var targetSkyTop: SIMD4<Float>
+    var targetSkyMiddle: SIMD4<Float>
+    var targetSkyBottom: SIMD4<Float>
+    var targetAtmosphere: SIMD4<Float>
+    var targetAccent: SIMD4<Float>
+    var targetSilhouette: SIMD4<Float>
+    var themeParameters: SIMD4<Float>
 }
 
 private struct DrawUniforms {
@@ -14,6 +27,8 @@ private struct DrawUniforms {
     var normalMatrix: simd_float4x4
     var baseColor: SIMD4<Float>
     var materialParameters: SIMD4<Float>
+    var coolLightColor: SIMD4<Float>
+    var warmLightColor: SIMD4<Float>
 }
 
 private struct Ripple {
@@ -53,11 +68,16 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private var lastEffectsTime: Float?
     private var lastRippleTime: Float = 0
     private var viewportSize = SIMD2<Float>(1, 1)
+    private var sourceTheme: SeasonTheme
+    private var targetTheme: SeasonTheme
+    private var themeTransitionStartedAt = CACurrentMediaTime()
+    private var themeTransitionDuration: CFTimeInterval = 0
+    private var framePalette: MetalSeasonPalette
 
     private let cameraEye = ToySceneLayout.cameraEye
     private let sceneAnchor = ToySceneLayout.initialAnchor
 
-    init(coordinator: ExperienceCoordinator) {
+    init(coordinator: ExperienceCoordinator, theme: SeasonTheme) {
         guard let device = MTLCreateSystemDefaultDevice(),
               let commandQueue = device.makeCommandQueue(),
               let library = device.makeDefaultLibrary() else {
@@ -67,6 +87,9 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         self.coordinator = coordinator
         self.device = device
         self.commandQueue = commandQueue
+        sourceTheme = theme
+        targetTheme = theme
+        framePalette = theme.metalPalette
         isRunningUnitTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         #if targetEnvironment(simulator)
         // SimMetalHost 在部分 Xcode/iOS Simulator 组合下无法稳定分配
@@ -140,6 +163,14 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         super.init()
     }
 
+    func setTheme(_ theme: SeasonTheme, animated: Bool) {
+        guard theme != targetTheme else { return }
+        sourceTheme = targetTheme
+        targetTheme = theme
+        themeTransitionStartedAt = CACurrentMediaTime()
+        themeTransitionDuration = animated ? 0.45 : 0
+    }
+
     func configure(_ view: MTKView) {
         view.device = device
         view.delegate = self
@@ -187,10 +218,37 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             bobPosition: bobPosition
         )
 
+        let transitionProgress = themeTransitionProgress(at: CACurrentMediaTime())
+        let sourcePalette = sourceTheme.metalPalette
+        let targetPalette = targetTheme.metalPalette
+        framePalette = MetalSeasonPalette.mix(
+            from: sourcePalette,
+            to: targetPalette,
+            progress: transitionProgress
+        )
+
         var backgroundUniforms = BackgroundUniforms(
             viewportSize: viewportSize,
             time: snapshot.elapsedTime,
-            activity: snapshot.state.activity
+            activity: snapshot.state.activity,
+            sourceSkyTop: sourcePalette.skyTop,
+            sourceSkyMiddle: sourcePalette.skyMiddle,
+            sourceSkyBottom: sourcePalette.skyBottom,
+            sourceAtmosphere: sourcePalette.atmosphere,
+            sourceAccent: sourcePalette.seasonalAccent,
+            sourceSilhouette: sourcePalette.silhouette,
+            targetSkyTop: targetPalette.skyTop,
+            targetSkyMiddle: targetPalette.skyMiddle,
+            targetSkyBottom: targetPalette.skyBottom,
+            targetAtmosphere: targetPalette.atmosphere,
+            targetAccent: targetPalette.seasonalAccent,
+            targetSilhouette: targetPalette.silhouette,
+            themeParameters: SIMD4<Float>(
+                sourceTheme.shaderIndex,
+                targetTheme.shaderIndex,
+                transitionProgress,
+                0
+            )
         )
         encoder.pushDebugGroup("水墨夜景")
         encoder.setRenderPipelineState(backgroundPipeline)
@@ -248,6 +306,13 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         commandBuffer.commit()
     }
 
+    private func themeTransitionProgress(at time: CFTimeInterval) -> Float {
+        guard themeTransitionDuration > 0 else { return 1 }
+        let elapsed = (time - themeTransitionStartedAt) / themeTransitionDuration
+        let linearProgress = Float(min(max(elapsed, 0), 1))
+        return linearProgress * linearProgress * (3 - 2 * linearProgress)
+    }
+
     private func drawToy(
         encoder: MTLRenderCommandEncoder,
         snapshot: RenderSnapshot,
@@ -255,13 +320,9 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         bobPosition: SIMD3<Float>,
         viewProjection: simd_float4x4
     ) {
-        let bamboo = SIMD4<Float>(0.62, 0.42, 0.16, 1)
-        let cutBamboo = SIMD4<Float>(0.86, 0.69, 0.38, 1)
-        let paleBamboo = SIMD4<Float>(0.82, 0.69, 0.42, 0.88)
-        let membrane = SIMD4<Float>(0.88, 0.79, 0.60, 0.97)
-        let lacquer = SIMD4<Float>(0.60, 0.075, 0.035, 1)
-        let cordRed = SIMD4<Float>(0.74, 0.16, 0.075, 1)
         let ink = SIMD4<Float>(0.018, 0.014, 0.012, 1)
+        var membrane = framePalette.paleBamboo
+        membrane.w = 0.97
 
         let shaftStart = anchorPosition + SIMD3<Float>(0, -0.055, 0)
         let shaftEnd = shaftStart + SIMD3<Float>(0, -1.87, 0)
@@ -269,7 +330,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         draw(
             mesh: cylinder,
             modelMatrix: .segment(from: shaftStart, to: shaftEnd, radius: 0.080),
-            color: bamboo,
+            color: framePalette.bamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
@@ -286,7 +347,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
                     to: nodeCenter + shaftDirection * 0.022,
                     radius: 0.096
                 ),
-                color: cutBamboo,
+                color: framePalette.cutBamboo,
                 materialKind: 2,
                 encoder: encoder,
                 viewProjection: viewProjection
@@ -300,7 +361,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
                 to: anchorPosition + shaftDirection * 0.14,
                 radius: 0.118
             ),
-            color: cordRed,
+            color: framePalette.cord,
             materialKind: 3,
             encoder: encoder,
             viewProjection: viewProjection
@@ -308,7 +369,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         drawSphere(
             at: anchorPosition - shaftDirection * 0.24,
             scale: 0.140,
-            color: lacquer,
+            color: framePalette.lacquer,
             materialKind: 3,
             encoder: encoder,
             viewProjection: viewProjection
@@ -316,7 +377,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         drawSphere(
             at: anchorPosition + shaftDirection * 0.17,
             scale: 0.086,
-            color: cutBamboo,
+            color: framePalette.cutBamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
@@ -350,7 +411,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             modelMatrix: bodyFrame
                 * .translation(SIMD3<Float>(0, -0.43, 0))
                 * .scale(SIMD3<Float>(0.72, 0.86, 0.72)),
-            color: bamboo,
+            color: framePalette.bamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
@@ -373,7 +434,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             modelMatrix: bodyFrame
                 * .rotation(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
                 * .scale(SIMD3<Float>(repeating: 0.73)),
-            color: lacquer,
+            color: framePalette.lacquer,
             materialKind: 3,
             encoder: encoder,
             viewProjection: viewProjection
@@ -383,7 +444,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             modelMatrix: bodyFrame
                 * .translation(SIMD3<Float>(0, 0.018, 0))
                 * .scale(SIMD3<Float>(0.070, 0.050, 0.070)),
-            color: cordRed,
+            color: framePalette.cord,
             materialKind: 4,
             emissive: snapshot.state.activity * 0.18,
             encoder: encoder,
@@ -395,7 +456,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
                 * .translation(SIMD3<Float>(0, -0.86, 0))
                 * .rotation(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
                 * .scale(SIMD3<Float>(repeating: 0.65)),
-            color: cutBamboo,
+            color: framePalette.cutBamboo,
             materialKind: 2,
             encoder: encoder,
             viewProjection: viewProjection
@@ -405,7 +466,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             modelMatrix: bodyFrame
                 * .translation(SIMD3<Float>(0, -0.18, 0.39))
                 * .scale(SIMD3<Float>(0.26, 0.15, 0.16)),
-            color: cutBamboo,
+            color: framePalette.cutBamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
@@ -429,7 +490,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             draw(
                 mesh: wing,
                 modelMatrix: wingTransform,
-                color: paleBamboo,
+                color: framePalette.paleBamboo,
                 materialKind: 5,
                 encoder: encoder,
                 viewProjection: viewProjection
@@ -483,8 +544,10 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             viewProjectionMatrix: viewProjection,
             modelMatrix: matrix_identity_float4x4,
             normalMatrix: matrix_identity_float4x4,
-            baseColor: SIMD4<Float>(0.75, 0.66, 0.48, 0.90),
-            materialParameters: SIMD4<Float>(4, 0, 0, 0)
+            baseColor: framePalette.rope,
+            materialParameters: SIMD4<Float>(4, 0, 0, 0),
+            coolLightColor: framePalette.coolLight,
+            warmLightColor: framePalette.warmLight
         )
         encoder.setCullMode(.none)
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
@@ -567,7 +630,12 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             draw(
                 mesh: sphere,
                 modelMatrix: transform,
-                color: SIMD4<Float>(0.97, 0.78, 0.43, alpha),
+                color: SIMD4<Float>(
+                    framePalette.effect.x,
+                    framePalette.effect.y,
+                    framePalette.effect.z,
+                    alpha
+                ),
                 emissive: 0.42,
                 encoder: encoder,
                 viewProjection: viewProjection
@@ -582,7 +650,12 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             draw(
                 mesh: torus,
                 modelMatrix: transform,
-                color: SIMD4<Float>(0.97, 0.76, 0.38, (1 - progress) * 0.24),
+                color: SIMD4<Float>(
+                    framePalette.effect.x,
+                    framePalette.effect.y,
+                    framePalette.effect.z,
+                    (1 - progress) * 0.24
+                ),
                 emissive: 0.36,
                 encoder: encoder,
                 viewProjection: viewProjection
@@ -624,7 +697,9 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             modelMatrix: modelMatrix,
             normalMatrix: simd_transpose(simd_inverse(modelMatrix)),
             baseColor: color,
-            materialParameters: SIMD4<Float>(materialKind, emissive, 0, 0)
+            materialParameters: SIMD4<Float>(materialKind, emissive, 0, 0),
+            coolLightColor: framePalette.coolLight,
+            warmLightColor: framePalette.warmLight
         )
         encoder.setVertexBuffer(mesh.vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<DrawUniforms>.stride, index: 1)
