@@ -267,7 +267,7 @@ private struct BrandMark: View {
         }
         .shadow(color: .black.opacity(0.24), radius: 7, y: 2)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("竹知了，一转就哇哇叫")
+        .accessibilityLabel("赛博竹知了，一转就哇哇叫")
     }
 }
 
@@ -372,7 +372,7 @@ private struct SafetyIntroduction: View {
 
             VStack(spacing: 0) {
                 HStack {
-                    Text("竹知了")
+                    Text("赛博竹知了")
                         .font(.custom("Songti SC", size: 17, relativeTo: .headline))
                         .foregroundStyle(Color(red: 0.91, green: 0.85, blue: 0.73))
                     Spacer()
