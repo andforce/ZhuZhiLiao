@@ -74,7 +74,10 @@ final class MotionController {
         let rotationRate = deviceToCalibratedScene.act(motion.rotationRate.simdVector)
 
         return MotionSample(
-            userAcceleration: accelerationFilter.process(acceleration),
+            userAcceleration: accelerationFilter.process(
+                acceleration,
+                timestamp: motion.timestamp
+            ),
             gravityDirection: gravity,
             rotationRate: rotationRate,
             relativeAttitude: deviceToCalibratedScene,
@@ -101,4 +104,3 @@ private extension CMQuaternion {
         simd_normalize(simd_quatf(ix: Float(x), iy: Float(y), iz: Float(z), r: Float(w)))
     }
 }
-

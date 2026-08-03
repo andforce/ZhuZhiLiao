@@ -16,10 +16,14 @@ final class ExperienceCoordinator: ObservableObject {
     private let audioEngine: ToyAudioEngine
     private let counterService: CounterService
     private var simulation: ToySimulation
-    private var lastFrameTime: CFTimeInterval?
+    private var simulationTask: Task<Void, Never>?
+    private var latestSimulationFrame: SimulationFrame
+    private var latestRotationRate = SIMD3<Float>.zero
+    private var pendingRenderedWahs = 0
+    private var awaitingCalibratedGravity = true
+    private var lastHUDPresentationTime: CFTimeInterval = 0
     private var elapsedTime: Float = 0
     private var automaticPhase: Float = 0
-    private var hudElapsed: Float = 0
     private let isRunningUnitTests: Bool
 
     init(
@@ -32,13 +36,18 @@ final class ExperienceCoordinator: ObservableObject {
         self.audioEngine = audioEngine
         self.counterService = counterService
         self.simulation = simulation
+        latestSimulationFrame = SimulationFrame(
+            state: simulation.state,
+            revolutionsPerSecond: 0,
+            phase: 0,
+            completedWahs: 0
+        )
         isRunningUnitTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
     func start() {
         guard !isRunning else { return }
         isRunning = true
-        lastFrameTime = nil
         motionController.start()
         motionIsAvailable = motionController.isAvailable
 
@@ -47,6 +56,7 @@ final class ExperienceCoordinator: ObservableObject {
         }
 
         guard !isRunningUnitTests else { return }
+        startSimulationLoop()
         audioEngine.start()
         counterService.start()
     }
@@ -54,7 +64,8 @@ final class ExperienceCoordinator: ObservableObject {
     func pause() {
         guard isRunning else { return }
         isRunning = false
-        lastFrameTime = nil
+        simulationTask?.cancel()
+        simulationTask = nil
         motionController.stop()
 
         guard !isRunningUnitTests else { return }
@@ -64,61 +75,30 @@ final class ExperienceCoordinator: ObservableObject {
 
     func recalibrate() {
         motionController.resetCalibration()
-        simulation.reset()
-        lastFrameTime = nil
+        if automaticMode {
+            resetSimulation(gravityDirection: SIMD3<Float>(0, -1, 0))
+            awaitingCalibratedGravity = false
+        } else {
+            awaitingCalibratedGravity = true
+        }
     }
 
     func toggleAutomaticMode() {
         automaticMode.toggle()
         automaticPhase = 0
-        simulation.reset()
-        if !automaticMode {
+        if automaticMode {
+            resetSimulation(gravityDirection: SIMD3<Float>(0, -1, 0))
+            awaitingCalibratedGravity = false
+        } else {
             motionController.resetCalibration()
+            awaitingCalibratedGravity = true
         }
     }
 
     func frame(at timestamp: CFTimeInterval) -> RenderSnapshot {
-        let deltaTime: TimeInterval
-        if let lastFrameTime {
-            deltaTime = min(max(timestamp - lastFrameTime, 0), 0.05)
-        } else {
-            deltaTime = 1.0 / 60.0
-        }
-        self.lastFrameTime = timestamp
-
-        let input: MotionInput
-        let rotationRate: SIMD3<Float>
-        if automaticMode {
-            automaticPhase += Float(deltaTime) * 3.15 * 2 * .pi
-            let force = SIMD3<Float>(
-                cos(automaticPhase) * 0.82,
-                sin(automaticPhase) * 0.82,
-                sin(automaticPhase * 0.63) * 0.28
-            )
-            input = MotionInput(
-                anchorAcceleration: force,
-                gravityDirection: SIMD3<Float>(0, -1, 0),
-                rotationRate: SIMD3<Float>(0, 0, 0.08)
-            )
-            rotationRate = input.rotationRate
-        } else {
-            let sample = motionController.latestSample()
-            input = MotionInput(
-                anchorAcceleration: sample.userAcceleration,
-                gravityDirection: sample.gravityDirection,
-                rotationRate: sample.rotationRate
-            )
-            rotationRate = sample.rotationRate
-        }
-
-        let frame = simulation.advance(input: input, deltaTime: deltaTime)
-        elapsedTime += Float(deltaTime)
-        hudElapsed += Float(deltaTime)
-
-        if frame.completedWahs > 0, !automaticMode {
-            counterService.record(wahs: frame.completedWahs)
-            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.55)
-        }
+        let frame = latestSimulationFrame
+        let emittedWahs = pendingRenderedWahs
+        pendingRenderedWahs = 0
 
         if !isRunningUnitTests {
             audioEngine.update(
@@ -128,8 +108,8 @@ final class ExperienceCoordinator: ObservableObject {
             )
         }
 
-        if hudElapsed >= 0.12 {
-            hudElapsed = 0
+        if timestamp - lastHUDPresentationTime >= 0.12 {
+            lastHUDPresentationTime = timestamp
             revolutionsPerSecond = frame.revolutionsPerSecond
             activity = frame.state.activity
             stats = counterService.stats
@@ -141,9 +121,75 @@ final class ExperienceCoordinator: ObservableObject {
             revolutionsPerSecond: frame.revolutionsPerSecond,
             phase: frame.phase,
             elapsedTime: elapsedTime,
-            rotationRate: rotationRate,
-            emittedWahs: frame.completedWahs
+            rotationRate: latestRotationRate,
+            emittedWahs: emittedWahs
         )
     }
-}
 
+    private func startSimulationLoop() {
+        simulationTask?.cancel()
+        simulationTask = Task { @MainActor [weak self] in
+            var previousTime = CACurrentMediaTime()
+            while let self, !Task.isCancelled, self.isRunning {
+                let currentTime = CACurrentMediaTime()
+                self.stepSimulation(deltaTime: currentTime - previousTime)
+                previousTime = currentTime
+                try? await Task.sleep(for: .nanoseconds(8_333_333))
+            }
+        }
+    }
+
+    private func stepSimulation(deltaTime: TimeInterval) {
+        let clampedDeltaTime = min(max(deltaTime, 0), 0.05)
+        let input: MotionInput
+        if automaticMode {
+            automaticPhase += Float(clampedDeltaTime) * 3.15 * 2 * .pi
+            let force = SIMD3<Float>(
+                cos(automaticPhase) * 0.82,
+                sin(automaticPhase) * 0.82,
+                sin(automaticPhase * 0.63) * 0.28
+            )
+            input = MotionInput(
+                anchorAcceleration: force,
+                gravityDirection: SIMD3<Float>(0, -1, 0),
+                rotationRate: SIMD3<Float>(0, 0, 0.08)
+            )
+            latestRotationRate = input.rotationRate
+        } else {
+            let sample = motionController.latestSample()
+            guard sample.isAvailable else { return }
+            if awaitingCalibratedGravity {
+                resetSimulation(gravityDirection: sample.gravityDirection)
+                awaitingCalibratedGravity = false
+            }
+            input = MotionInput(
+                anchorAcceleration: sample.userAcceleration,
+                gravityDirection: sample.gravityDirection,
+                rotationRate: sample.rotationRate
+            )
+            latestRotationRate = sample.rotationRate
+        }
+
+        let frame = simulation.advance(input: input, deltaTime: clampedDeltaTime)
+        latestSimulationFrame = frame
+        elapsedTime += Float(clampedDeltaTime)
+        pendingRenderedWahs += frame.completedWahs
+
+        if frame.completedWahs > 0, !automaticMode {
+            counterService.record(wahs: frame.completedWahs)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.55)
+        }
+    }
+
+    private func resetSimulation(gravityDirection: SIMD3<Float>) {
+        simulation.reset(gravityDirection: gravityDirection)
+        latestSimulationFrame = SimulationFrame(
+            state: simulation.state,
+            revolutionsPerSecond: 0,
+            phase: 0,
+            completedWahs: 0
+        )
+        latestRotationRate = .zero
+        pendingRenderedWahs = 0
+    }
+}

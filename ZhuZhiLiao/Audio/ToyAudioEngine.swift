@@ -3,9 +3,9 @@ import Foundation
 
 @MainActor
 final class ToyAudioEngine: NSObject {
-    private let engine = AVAudioEngine()
-    private let player = AVAudioPlayerNode()
-    private let varispeed = AVAudioUnitVarispeed()
+    private var engine = AVAudioEngine()
+    private var player = AVAudioPlayerNode()
+    private var varispeed = AVAudioUnitVarispeed()
     private var loopBuffer: AVAudioPCMBuffer?
     private var isConfigured = false
     private var wantsPlayback = false
@@ -14,19 +14,19 @@ final class ToyAudioEngine: NSObject {
         super.init()
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleInterruption(_:)),
+            selector: #selector(receiveInterruption(_:)),
             name: AVAudioSession.interruptionNotification,
             object: nil
         )
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleMediaServicesReset),
+            selector: #selector(receiveMediaServicesReset(_:)),
             name: AVAudioSession.mediaServicesWereResetNotification,
             object: nil
         )
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleRouteChange),
+            selector: #selector(receiveRouteChange(_:)),
             name: AVAudioSession.routeChangeNotification,
             object: nil
         )
@@ -111,8 +111,9 @@ final class ToyAudioEngine: NSObject {
     private func rebuildAndResumeIfNeeded() {
         player.stop()
         engine.stop()
-        engine.detach(player)
-        engine.detach(varispeed)
+        engine = AVAudioEngine()
+        player = AVAudioPlayerNode()
+        varispeed = AVAudioUnitVarispeed()
         loopBuffer = nil
         isConfigured = false
         if wantsPlayback {
@@ -121,16 +122,26 @@ final class ToyAudioEngine: NSObject {
     }
 
     @objc
-    private func handleInterruption(_ notification: Notification) {
-        guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: rawType) else { return }
+    nonisolated private func receiveInterruption(_ notification: Notification) {
+        guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt else {
+            return
+        }
+        let rawOptions = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+        Task { @MainActor [weak self] in
+            self?.handleInterruption(rawType: rawType, rawOptions: rawOptions)
+        }
+    }
+
+    private func handleInterruption(rawType: UInt, rawOptions: UInt) {
+        guard let type = AVAudioSession.InterruptionType(rawValue: rawType) else { return }
 
         switch type {
         case .began:
             player.pause()
             engine.pause()
         case .ended:
-            if wantsPlayback {
+            let options = AVAudioSession.InterruptionOptions(rawValue: rawOptions)
+            if wantsPlayback, options.contains(.shouldResume) {
                 start()
             }
         @unknown default:
@@ -139,15 +150,17 @@ final class ToyAudioEngine: NSObject {
     }
 
     @objc
-    private func handleMediaServicesReset() {
-        rebuildAndResumeIfNeeded()
+    nonisolated private func receiveMediaServicesReset(_ notification: Notification) {
+        Task { @MainActor [weak self] in
+            self?.rebuildAndResumeIfNeeded()
+        }
     }
 
     @objc
-    private func handleRouteChange() {
-        if wantsPlayback, !engine.isRunning {
-            start()
+    nonisolated private func receiveRouteChange(_ notification: Notification) {
+        Task { @MainActor [weak self] in
+            guard let self, self.wantsPlayback, !self.engine.isRunning else { return }
+            self.start()
         }
     }
 }
-

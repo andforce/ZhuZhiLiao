@@ -4,11 +4,18 @@ struct ContentView: View {
     @ObservedObject var coordinator: ExperienceCoordinator
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("zzl_safety_intro_seen") private var hasSeenSafetyIntroduction = false
+    private let isRunningUnitTests = ProcessInfo.processInfo.environment[
+        "XCTestConfigurationFilePath"
+    ] != nil
 
     var body: some View {
         ZStack {
-            MetalSurface(coordinator: coordinator)
-                .ignoresSafeArea()
+            if isRunningUnitTests {
+                Color.clear
+            } else {
+                MetalSurface(coordinator: coordinator)
+                    .ignoresSafeArea()
+            }
 
             interfaceOverlay
 

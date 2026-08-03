@@ -34,12 +34,20 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private let cylinder: MetalMesh
     private let sphere: MetalMesh
     private let torus: MetalMesh
-    private let ropeVertexBuffer: MTLBuffer
+    private let ropeVertexBuffers: [MTLBuffer]
+    private let inFlightSemaphore = DispatchSemaphore(value: 3)
     private let sampleCount: Int
     private let isRunningUnitTests: Bool
 
     private var trail: [SIMD3<Float>] = []
     private var ripples: [Ripple] = []
+    private var ropePoints: [SIMD3<Float>] = []
+    private var ropeVertices: [MetalVertex] = []
+    private var frameResourceIndex = 0
+    private var stableBodyTangent = SIMD3<Float>(0, 0, 1)
+    private var wingAngles = SIMD2<Float>(repeating: 0.18)
+    private var wingVelocities = SIMD2<Float>.zero
+    private var lastEffectsTime: Float?
     private var lastRippleTime: Float = 0
     private var viewportSize = SIMD2<Float>(1, 1)
 
@@ -107,10 +115,12 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         cylinder = MeshGenerator.cylinder(device: device)
         sphere = MeshGenerator.sphere(device: device)
         torus = MeshGenerator.torus(device: device)
-        ropeVertexBuffer = device.makeBuffer(
-            length: MemoryLayout<MetalVertex>.stride * 50,
-            options: .storageModeShared
-        )!
+        ropeVertexBuffers = (0..<3).map { _ in
+            device.makeBuffer(
+                length: MemoryLayout<MetalVertex>.stride * 50,
+                options: .storageModeShared
+            )!
+        }
 
         super.init()
     }
@@ -141,6 +151,12 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
               let commandBuffer = commandQueue.makeCommandBuffer(),
               let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
             return
+        }
+        inFlightSemaphore.wait()
+        let ropeVertexBuffer = ropeVertexBuffers[frameResourceIndex]
+        frameResourceIndex = (frameResourceIndex + 1) % ropeVertexBuffers.count
+        commandBuffer.addCompletedHandler { [inFlightSemaphore] _ in
+            inFlightSemaphore.signal()
         }
 
         let snapshot = coordinator.frame(at: CACurrentMediaTime())
@@ -191,6 +207,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             encoder: encoder,
             state: snapshot.state,
             bobPosition: bobPosition,
+            vertexBuffer: ropeVertexBuffer,
             viewProjection: viewProjection
         )
         drawEffects(
@@ -231,9 +248,27 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         drawSphere(at: sceneAnchor + SIMD3<Float>(0, -0.045, 0), scale: 0.145, color: red, encoder: encoder, viewProjection: viewProjection)
 
         let towardAnchor = simd_normalize(sceneAnchor - bobPosition)
-        let alignment = simd_quatf(from: SIMD3<Float>(0, 1, 0), to: towardAnchor)
+        var bodyTangent = stableBodyTangent
+            - towardAnchor * simd_dot(stableBodyTangent, towardAnchor)
+        if simd_length_squared(bodyTangent) < 0.000_001 {
+            let fallback = abs(towardAnchor.y) < 0.9
+                ? SIMD3<Float>(0, 1, 0)
+                : SIMD3<Float>(0, 0, 1)
+            bodyTangent = simd_cross(fallback, towardAnchor)
+        }
+        bodyTangent = simd_normalize(bodyTangent)
+        let sideAxis = simd_normalize(simd_cross(towardAnchor, bodyTangent))
+        let forwardAxis = simd_normalize(simd_cross(sideAxis, towardAnchor))
+        let alignment = simd_float4x4(columns: (
+            SIMD4<Float>(sideAxis, 0),
+            SIMD4<Float>(towardAnchor, 0),
+            SIMD4<Float>(forwardAxis, 0),
+            SIMD4<Float>(0, 0, 0, 1)
+        ))
         let spin = simd_quatf(angle: snapshot.phase * 0.45, axis: SIMD3<Float>(0, 1, 0))
-        let bodyFrame = simd_float4x4.translation(bobPosition) * simd_float4x4.rotation(alignment * spin)
+        let bodyFrame = simd_float4x4.translation(bobPosition)
+            * alignment
+            * simd_float4x4.rotation(spin)
 
         draw(
             mesh: cylinder,
@@ -260,15 +295,13 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             viewProjection: viewProjection
         )
 
-        for sign: Float in [-1, 1] {
+        for (wingIndex, sign) in [Float(-1), 1].enumerated() {
             let eyeTransform = bodyFrame
                 * .translation(SIMD3<Float>(sign * 0.145, -0.18, 0.235))
                 * .scale(SIMD3<Float>(repeating: 0.075))
             draw(mesh: sphere, modelMatrix: eyeTransform, color: black, encoder: encoder, viewProjection: viewProjection)
 
-            let flap = 0.18
-                + snapshot.state.activity * sin(snapshot.elapsedTime * 46 + sign * 0.35) * 0.32
-                + min(simd_length(snapshot.state.velocity) * 0.018, 0.28)
+            let flap = wingAngles[wingIndex]
             let wingRotation = simd_quatf(angle: sign * (0.16 + flap), axis: SIMD3<Float>(0, 0, 1))
                 * simd_quatf(angle: 0.16, axis: SIMD3<Float>(1, 0, 0))
             let wingTransform = bodyFrame
@@ -289,27 +322,28 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         encoder: MTLRenderCommandEncoder,
         state: ToyPhysicsState,
         bobPosition: SIMD3<Float>,
+        vertexBuffer: MTLBuffer,
         viewProjection: simd_float4x4
     ) {
         let pointCount = 25
         let sag = max(0, state.ropeLength - simd_length(state.position)) * 0.32
-        var points: [SIMD3<Float>] = []
-        points.reserveCapacity(pointCount)
+        ropePoints.removeAll(keepingCapacity: true)
+        ropePoints.reserveCapacity(pointCount)
 
         for index in 0..<pointCount {
             let fraction = Float(index) / Float(pointCount - 1)
             var point = simd_mix(sceneAnchor, bobPosition, SIMD3<Float>(repeating: fraction))
             point.y -= sag * sin(.pi * fraction)
-            points.append(point)
+            ropePoints.append(point)
         }
 
-        var vertices: [MetalVertex] = []
-        vertices.reserveCapacity(pointCount * 2)
+        ropeVertices.removeAll(keepingCapacity: true)
+        ropeVertices.reserveCapacity(pointCount * 2)
         for index in 0..<pointCount {
-            let previous = points[max(index - 1, 0)]
-            let next = points[min(index + 1, pointCount - 1)]
+            let previous = ropePoints[max(index - 1, 0)]
+            let next = ropePoints[min(index + 1, pointCount - 1)]
             let tangent = simd_normalize(next - previous)
-            let viewDirection = simd_normalize(cameraEye - points[index])
+            let viewDirection = simd_normalize(cameraEye - ropePoints[index])
             var side = simd_cross(tangent, viewDirection)
             if simd_length_squared(side) < 0.000_001 {
                 side = SIMD3<Float>(1, 0, 0)
@@ -318,13 +352,13 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             }
             let normal = simd_normalize(simd_cross(side, tangent))
             let width: Float = 0.011
-            vertices.append(MetalVertex(position: points[index] - side * width, normal: normal))
-            vertices.append(MetalVertex(position: points[index] + side * width, normal: normal))
+            ropeVertices.append(MetalVertex(position: ropePoints[index] - side * width, normal: normal))
+            ropeVertices.append(MetalVertex(position: ropePoints[index] + side * width, normal: normal))
         }
 
-        vertices.withUnsafeBytes { bytes in
+        ropeVertices.withUnsafeBytes { bytes in
             guard let baseAddress = bytes.baseAddress else { return }
-            ropeVertexBuffer.contents().copyMemory(from: baseAddress, byteCount: bytes.count)
+            vertexBuffer.contents().copyMemory(from: baseAddress, byteCount: bytes.count)
         }
 
         var uniforms = DrawUniforms(
@@ -335,14 +369,48 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             materialParameters: .zero
         )
         encoder.setCullMode(.none)
-        encoder.setVertexBuffer(ropeVertexBuffer, offset: 0, index: 0)
+        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<DrawUniforms>.stride, index: 1)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<DrawUniforms>.stride, index: 1)
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: vertices.count)
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: ropeVertices.count)
         encoder.setCullMode(.back)
     }
 
     private func updateEffects(snapshot: RenderSnapshot, bobPosition: SIMD3<Float>) {
+        let deltaTime = min(max(snapshot.elapsedTime - (lastEffectsTime ?? snapshot.elapsedTime), 0), 0.05)
+        lastEffectsTime = snapshot.elapsedTime
+
+        let ropeAxis = simd_normalize(sceneAnchor - bobPosition)
+        let tangentialVelocity = snapshot.state.velocity
+            - ropeAxis * simd_dot(snapshot.state.velocity, ropeAxis)
+        let tangentMagnitude = simd_length(tangentialVelocity)
+        let projectedStableTangent = stableBodyTangent
+            - ropeAxis * simd_dot(stableBodyTangent, ropeAxis)
+        if tangentMagnitude > 0.025 {
+            let measuredTangent = tangentialVelocity / tangentMagnitude
+            if simd_dot(measuredTangent, stableBodyTangent) < -0.2 {
+                stableBodyTangent = measuredTangent
+            } else {
+                stableBodyTangent = simd_normalize(
+                    stableBodyTangent * 0.82 + measuredTangent * 0.18
+                )
+            }
+        } else if simd_length_squared(projectedStableTangent) > 0.000_001 {
+            stableBodyTangent = simd_normalize(projectedStableTangent)
+        }
+
+        for wingIndex in 0..<2 {
+            let sign: Float = wingIndex == 0 ? -1 : 1
+            let target = 0.18
+                + snapshot.state.activity
+                    * sin(snapshot.elapsedTime * 46 + sign * 0.35) * 0.32
+                + min(simd_length(snapshot.state.velocity) * 0.018, 0.28)
+            let acceleration = (target - wingAngles[wingIndex]) * 82
+                - wingVelocities[wingIndex] * 13
+            wingVelocities[wingIndex] += acceleration * deltaTime
+            wingAngles[wingIndex] += wingVelocities[wingIndex] * deltaTime
+        }
+
         if trail.last.map({ simd_distance($0, bobPosition) > 0.035 }) ?? true {
             trail.insert(bobPosition, at: 0)
             if trail.count > 42 {

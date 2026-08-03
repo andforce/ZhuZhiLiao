@@ -33,5 +33,18 @@ final class MotionSampleFilterTests: XCTestCase {
 
         XCTAssertEqual(output.x, 0.25, accuracy: 0.0001)
     }
-}
 
+    func testRepeatedSensorTimestampDoesNotFilterSameSampleTwice() {
+        var filter = MotionSampleFilter(configuration: .init(
+            deadZone: 0,
+            maximumMagnitude: 10,
+            smoothingFactor: 0.25
+        ))
+
+        let first = filter.process(SIMD3<Float>(1, 0, 0), timestamp: 12.5)
+        let repeated = filter.process(SIMD3<Float>(1, 0, 0), timestamp: 12.5)
+
+        XCTAssertEqual(first.x, 0.25, accuracy: 0.000_1)
+        XCTAssertEqual(repeated, first)
+    }
+}

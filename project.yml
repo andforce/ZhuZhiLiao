@@ -18,16 +18,12 @@ targets:
     platform: iOS
     sources:
       - path: ZhuZhiLiao
-        excludes:
-          - Resources
-          - Assets.xcassets
-    resources:
-      - path: ZhuZhiLiao/Resources
-      - path: ZhuZhiLiao/Assets.xcassets
     info:
       path: ZhuZhiLiao/Info.plist
       properties:
         CFBundleDisplayName: 竹知了
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CADisableMinimumFrameDurationOnPhone: true
         ITSAppUsesNonExemptEncryption: false
         NSMotionUsageDescription: 运动数据仅用于在本机控制竹知了的转动方向，不会上传。

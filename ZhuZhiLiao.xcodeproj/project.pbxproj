@@ -10,9 +10,11 @@
 		020847E398F2A9D38A2720DB /* CounterCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B5E2E6D3523451131D6323 /* CounterCodec.swift */; };
 		17619AAA8C32B3F58CAA4125 /* CounterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD2B1A909B797795A1533BA /* CounterService.swift */; };
 		1B1DAFF096907932D0431D0A /* MetalSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CD538AD36F4FAB0E2DE5AE /* MetalSurface.swift */; };
+		1EA01DE331DBD8ABF1443EEE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2DED67B89D9B1D94B0CBE06C /* Assets.xcassets */; };
 		1F1B9BAD7C897C64D47296EF /* WahOutboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFE12B2709D13F3D4B0B18E /* WahOutboxTests.swift */; };
 		1F4F96C24625DEC9F4196702 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */; };
 		2FB859F329436C46F088E105 /* ToySimulationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2C879534D119ECFEE6D448 /* ToySimulationTests.swift */; };
+		379876F49D064C15F8F60993 /* zhuzhiliao-loop.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */; };
 		4324C25CA6E8E2988AAC1CB7 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E210088C96B2163A7E7B033A /* MetalRenderer.swift */; };
 		444F16515F0614D1139B879A /* MatrixMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E20C0A95C70EF4DDCBD2BA0 /* MatrixMath.swift */; };
 		4736DC2D3C44B6CE7D4EC7AD /* MotionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC6C4AB2C3747172AA234C77 /* MotionController.swift */; };
@@ -49,7 +51,9 @@
 		158E5F7EDC3D86D020823A6F /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		18FD2201EA9E8EA1629903A1 /* ZhuZhiLiaoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ZhuZhiLiaoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1C8F2FF197D0D52D002B9885 /* OrbitCounterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitCounterTests.swift; sourceTree = "<group>"; };
+		2DED67B89D9B1D94B0CBE06C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2FD2B1A909B797795A1533BA /* CounterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterService.swift; sourceTree = "<group>"; };
+		30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */ = {isa = PBXFileReference; path = "zhuzhiliao-loop.m4a"; sourceTree = "<group>"; };
 		3CC88CB70B0B26E0E40C92A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3DB3D9C2620F8EE2B4121D9F /* MeshGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshGenerator.swift; sourceTree = "<group>"; };
 		3E20C0A95C70EF4DDCBD2BA0 /* MatrixMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixMath.swift; sourceTree = "<group>"; };
@@ -151,9 +155,18 @@
 			path = ZhuZhiLiaoTests;
 			sourceTree = "<group>";
 		};
+		E4640A9A850BC35C0360CE17 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		E6886D7358AE801E032043C6 /* ZhuZhiLiao */ = {
 			isa = PBXGroup;
 			children = (
+				2DED67B89D9B1D94B0CBE06C /* Assets.xcassets */,
 				F7B81477869B1CE66698D7BD /* Info.plist */,
 				8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */,
 				FE0BFE4C8FFE8790E89F59A7 /* App */,
@@ -162,6 +175,7 @@
 				0340383EB9EC699A99E97BDE /* Network */,
 				A050BBC6D159884B542230FE /* Physics */,
 				BB1370258B8197ACFBAFC78D /* Rendering */,
+				E4640A9A850BC35C0360CE17 /* Resources */,
 			);
 			path = ZhuZhiLiao;
 			sourceTree = "<group>";
@@ -254,7 +268,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EA01DE331DBD8ABF1443EEE /* Assets.xcassets in Resources */,
 				1F4F96C24625DEC9F4196702 /* PrivacyInfo.xcprivacy in Resources */,
+				379876F49D064C15F8F60993 /* zhuzhiliao-loop.m4a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

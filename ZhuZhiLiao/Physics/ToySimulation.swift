@@ -201,7 +201,7 @@ struct ToySimulation: Sendable {
         let targetActivity = pow(drive, 1.25) * state.tension
         let response: Float = targetActivity > state.activity ? 10 : 3.2
         state.activity += (targetActivity - state.activity) * min(1, timeStep * response)
-        phase += angularSpeed * timeStep
+        phase += angularSpeed * timeStep * dominantAxisSign(state.angularVelocity)
         phase.formTruncatingRemainder(dividingBy: 2 * .pi)
     }
 
@@ -226,6 +226,19 @@ struct ToySimulation: Sendable {
 
 private func clamp(_ value: Float, _ lower: Float, _ upper: Float) -> Float {
     min(max(value, lower), upper)
+}
+
+private func dominantAxisSign(_ value: SIMD3<Float>) -> Float {
+    let magnitude = abs(value)
+    let dominant: Float
+    if magnitude.x >= magnitude.y, magnitude.x >= magnitude.z {
+        dominant = value.x
+    } else if magnitude.y >= magnitude.z {
+        dominant = value.y
+    } else {
+        dominant = value.z
+    }
+    return dominant < 0 ? -1 : 1
 }
 
 private extension SIMD3 where Scalar == Float {

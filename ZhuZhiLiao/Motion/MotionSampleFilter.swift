@@ -1,3 +1,4 @@
+import Foundation
 import simd
 
 struct MotionFilterConfiguration: Equatable, Sendable {
@@ -15,12 +16,20 @@ struct MotionFilterConfiguration: Equatable, Sendable {
 struct MotionSampleFilter: Sendable {
     let configuration: MotionFilterConfiguration
     private(set) var filteredValue = SIMD3<Float>.zero
+    private var lastTimestamp: TimeInterval?
 
     init(configuration: MotionFilterConfiguration = .live) {
         self.configuration = configuration
     }
 
-    mutating func process(_ sample: SIMD3<Float>) -> SIMD3<Float> {
+    mutating func process(
+        _ sample: SIMD3<Float>,
+        timestamp: TimeInterval? = nil
+    ) -> SIMD3<Float> {
+        if let timestamp, timestamp == lastTimestamp {
+            return filteredValue
+        }
+
         let magnitude = simd_length(sample)
         let target: SIMD3<Float>
 
@@ -34,11 +43,12 @@ struct MotionSampleFilter: Sendable {
 
         let smoothing = min(max(configuration.smoothingFactor, 0), 1)
         filteredValue += (target - filteredValue) * smoothing
+        lastTimestamp = timestamp
         return filteredValue
     }
 
     mutating func reset() {
         filteredValue = .zero
+        lastTimestamp = nil
     }
 }
-
