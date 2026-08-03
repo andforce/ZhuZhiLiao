@@ -104,7 +104,9 @@ final class ToyAudioEngine: NSObject {
 
     private func activateAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+        // 竹知了的声音是核心玩法，因此即使响铃/静音开关处于静音状态也应播放。
+        // 保留混音选项，避免启动玩具声音时打断用户正在播放的其他音频。
+        try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
         try session.setActive(true)
     }
 
