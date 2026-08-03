@@ -53,16 +53,16 @@
 		1C8F2FF197D0D52D002B9885 /* OrbitCounterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitCounterTests.swift; sourceTree = "<group>"; };
 		2DED67B89D9B1D94B0CBE06C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2FD2B1A909B797795A1533BA /* CounterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterService.swift; sourceTree = "<group>"; };
-		30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */ = {isa = PBXFileReference; path = "zhuzhiliao-loop.m4a"; sourceTree = "<group>"; };
+		30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = "zhuzhiliao-loop.m4a"; sourceTree = "<group>"; };
 		3CC88CB70B0B26E0E40C92A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		3DB3D9C2620F8EE2B4121D9F /* MeshGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshGenerator.swift; sourceTree = "<group>"; };
 		3E20C0A95C70EF4DDCBD2BA0 /* MatrixMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixMath.swift; sourceTree = "<group>"; };
-		4DEB8088056A3D0FC6E9490C /* ZhuZhiLiao.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ZhuZhiLiao.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4DEB8088056A3D0FC6E9490C /* 竹知了.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "竹知了.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EA4F205DBB136C692D9B87C /* MotionSampleFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionSampleFilterTests.swift; sourceTree = "<group>"; };
 		69CD538AD36F4FAB0E2DE5AE /* MetalSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalSurface.swift; sourceTree = "<group>"; };
 		7A09BC70309ABBB5DED4F809 /* ToyAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToyAudioEngine.swift; sourceTree = "<group>"; };
 		7D81DA45CC67961FFAF50308 /* MotionSampleFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionSampleFilter.swift; sourceTree = "<group>"; };
-		8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9D357BD872CCDE095BA20310 /* WahOutbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WahOutbox.swift; sourceTree = "<group>"; };
 		A1B5E2E6D3523451131D6323 /* CounterCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterCodec.swift; sourceTree = "<group>"; };
 		AD2C879534D119ECFEE6D448 /* ToySimulationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToySimulationTests.swift; sourceTree = "<group>"; };
@@ -89,7 +89,7 @@
 		4D7BB7552F3953C0F443A4AB /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4DEB8088056A3D0FC6E9490C /* ZhuZhiLiao.app */,
+				4DEB8088056A3D0FC6E9490C /* 竹知了.app */,
 				18FD2201EA9E8EA1629903A1 /* ZhuZhiLiaoTests.xctest */,
 			);
 			name = Products;
@@ -208,7 +208,7 @@
 			packageProductDependencies = (
 			);
 			productName = ZhuZhiLiao;
-			productReference = 4DEB8088056A3D0FC6E9490C /* ZhuZhiLiao.app */;
+			productReference = 4DEB8088056A3D0FC6E9490C /* 竹知了.app */;
 			productType = "com.apple.product-type.application";
 		};
 		784DB41CFFAFA2458DD48606 /* ZhuZhiLiaoTests */ = {
@@ -237,11 +237,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2600;
-				TargetAttributes = {
-					6526F7BC11298BBBDFEB8C06 = {
-						DevelopmentTeam = RH9H7T7RBU;
-					};
-				};
 			};
 			buildConfigurationList = 24385183763851B483C45BF3 /* Build configuration list for PBXProject "ZhuZhiLiao" */;
 			developmentRegion = en;
@@ -452,7 +447,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RH9H7T7RBU;
 				INFOPLIST_FILE = ZhuZhiLiao/Info.plist;
@@ -464,7 +459,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.azhegezhege.zhuzhiliao;
 				PRODUCT_MODULE_NAME = ZhuZhiLiao;
 				PRODUCT_NAME = "竹知了";
-				PROVISIONING_PROFILE_SPECIFIER = "ZhuZhiLiao iPhone15pro Development";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
