@@ -33,7 +33,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     private let depthState: MTLDepthStencilState
     private let translucentDepthState: MTLDepthStencilState
     private let cylinder: MetalMesh
-    private let resonator: MetalMesh
+    private let bambooTube: MetalMesh
     private let wing: MetalMesh
     private let sphere: MetalMesh
     private let torus: MetalMesh
@@ -121,10 +121,11 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
         translucentDepthState = device.makeDepthStencilState(descriptor: translucentDescriptor)!
 
         cylinder = MeshGenerator.cylinder(device: device)
-        resonator = MeshGenerator.frustum(
+        bambooTube = MeshGenerator.hollowTube(
             device: device,
-            bottomRadius: 0.41,
-            topRadius: 0.5
+            bottomRadius: 0.45,
+            topRadius: 0.50,
+            wallThickness: 0.095
         )
         wing = MeshGenerator.wing(device: device)
         sphere = MeshGenerator.sphere(device: device)
@@ -256,28 +257,48 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     ) {
         let bamboo = SIMD4<Float>(0.62, 0.42, 0.16, 1)
         let cutBamboo = SIMD4<Float>(0.86, 0.69, 0.38, 1)
-        let paleBamboo = SIMD4<Float>(0.79, 0.64, 0.35, 0.92)
+        let paleBamboo = SIMD4<Float>(0.82, 0.69, 0.42, 0.88)
+        let membrane = SIMD4<Float>(0.88, 0.79, 0.60, 0.97)
         let lacquer = SIMD4<Float>(0.60, 0.075, 0.035, 1)
         let cordRed = SIMD4<Float>(0.74, 0.16, 0.075, 1)
         let ink = SIMD4<Float>(0.018, 0.014, 0.012, 1)
 
         let shaftStart = anchorPosition + SIMD3<Float>(0, -0.055, 0)
-        let shaftEnd = anchorPosition + SIMD3<Float>(0, -1.55, 0)
+        let shaftEnd = shaftStart + SIMD3<Float>(0, -1.87, 0)
         let shaftDirection = simd_normalize(shaftEnd - shaftStart)
         draw(
             mesh: cylinder,
-            modelMatrix: .segment(from: shaftStart, to: shaftEnd, radius: 0.055),
+            modelMatrix: .segment(from: shaftStart, to: shaftEnd, radius: 0.080),
             color: bamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
         )
+
+        // Slightly raised nodes keep the enlarged handle recognisably bamboo
+        // without making it look carved or ornamental.
+        for distance in [Float(0.52), 1.12] {
+            let nodeCenter = shaftStart + shaftDirection * distance
+            draw(
+                mesh: cylinder,
+                modelMatrix: .segment(
+                    from: nodeCenter - shaftDirection * 0.022,
+                    to: nodeCenter + shaftDirection * 0.022,
+                    radius: 0.096
+                ),
+                color: cutBamboo,
+                materialKind: 2,
+                encoder: encoder,
+                viewProjection: viewProjection
+            )
+        }
+
         draw(
             mesh: cylinder,
             modelMatrix: .segment(
-                from: anchorPosition - shaftDirection * 0.08,
-                to: anchorPosition + shaftDirection * 0.11,
-                radius: 0.092
+                from: anchorPosition - shaftDirection * 0.10,
+                to: anchorPosition + shaftDirection * 0.14,
+                radius: 0.118
             ),
             color: cordRed,
             materialKind: 3,
@@ -285,16 +306,16 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             viewProjection: viewProjection
         )
         drawSphere(
-            at: anchorPosition - shaftDirection * 0.20,
-            scale: 0.115,
+            at: anchorPosition - shaftDirection * 0.24,
+            scale: 0.140,
             color: lacquer,
             materialKind: 3,
             encoder: encoder,
             viewProjection: viewProjection
         )
         drawSphere(
-            at: anchorPosition + shaftDirection * 0.13,
-            scale: 0.071,
+            at: anchorPosition + shaftDirection * 0.17,
+            scale: 0.086,
             color: cutBamboo,
             materialKind: 1,
             encoder: encoder,
@@ -325,41 +346,65 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
             * simd_float4x4.rotation(spin)
 
         draw(
-            mesh: resonator,
+            mesh: bambooTube,
             modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, -0.42, 0))
-                * .scale(SIMD3<Float>(0.68, 0.84, 0.68)),
+                * .translation(SIMD3<Float>(0, -0.43, 0))
+                * .scale(SIMD3<Float>(0.72, 0.86, 0.72)),
             color: bamboo,
             materialKind: 1,
             encoder: encoder,
             viewProjection: viewProjection
         )
+
+        // The rope-side end is covered by a fibrous membrane. The opposite
+        // end remains open, exposing the bamboo wall and resonant cavity.
         draw(
             mesh: cylinder,
             modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, 0.005, 0))
-                * .scale(SIMD3<Float>(0.73, 0.074, 0.73)),
+                * .translation(SIMD3<Float>(0, -0.012, 0))
+                * .scale(SIMD3<Float>(0.60, 0.026, 0.60)),
+            color: membrane,
+            materialKind: 6,
+            encoder: encoder,
+            viewProjection: viewProjection
+        )
+        draw(
+            mesh: torus,
+            modelMatrix: bodyFrame
+                * .rotation(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
+                * .scale(SIMD3<Float>(repeating: 0.73)),
             color: lacquer,
             materialKind: 3,
             encoder: encoder,
             viewProjection: viewProjection
         )
         draw(
-            mesh: cylinder,
+            mesh: sphere,
             modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, 0.057, 0))
-                * .scale(SIMD3<Float>(0.65, 0.030, 0.65)),
-            color: SIMD4<Float>(0.91, 0.79, 0.52, 1),
+                * .translation(SIMD3<Float>(0, 0.018, 0))
+                * .scale(SIMD3<Float>(0.070, 0.050, 0.070)),
+            color: cordRed,
+            materialKind: 4,
+            emissive: snapshot.state.activity * 0.18,
+            encoder: encoder,
+            viewProjection: viewProjection
+        )
+        draw(
+            mesh: torus,
+            modelMatrix: bodyFrame
+                * .translation(SIMD3<Float>(0, -0.86, 0))
+                * .rotation(simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
+                * .scale(SIMD3<Float>(repeating: 0.65)),
+            color: cutBamboo,
             materialKind: 2,
-            emissive: snapshot.state.activity * 0.34,
             encoder: encoder,
             viewProjection: viewProjection
         )
         draw(
             mesh: sphere,
             modelMatrix: bodyFrame
-                * .translation(SIMD3<Float>(0, -0.18, 0.31))
-                * .scale(SIMD3<Float>(0.28, 0.20, 0.18)),
+                * .translation(SIMD3<Float>(0, -0.18, 0.39))
+                * .scale(SIMD3<Float>(0.26, 0.15, 0.16)),
             color: cutBamboo,
             materialKind: 1,
             encoder: encoder,
@@ -368,8 +413,8 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
 
         for (wingIndex, sign) in [Float(-1), 1].enumerated() {
             let eyeTransform = bodyFrame
-                * .translation(SIMD3<Float>(sign * 0.105, -0.16, 0.43))
-                * .scale(SIMD3<Float>(repeating: 0.060))
+                * .translation(SIMD3<Float>(sign * 0.10, -0.15, 0.53))
+                * .scale(SIMD3<Float>(repeating: 0.050))
             draw(mesh: sphere, modelMatrix: eyeTransform, color: ink, encoder: encoder, viewProjection: viewProjection)
 
             let flap = wingAngles[wingIndex]
@@ -377,9 +422,10 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
                 * simd_quatf(angle: sign * 0.09, axis: SIMD3<Float>(0, 1, 0))
                 * simd_quatf(angle: 0.10, axis: SIMD3<Float>(1, 0, 0))
             let wingTransform = bodyFrame
-                * .translation(SIMD3<Float>(sign * 0.14, -0.43, 0.23))
+                * .translation(SIMD3<Float>(sign * 0.24, -0.40, 0.29))
                 * .rotation(wingRotation)
-                * .scale(SIMD3<Float>(0.50, 0.86, 0.34))
+                * .scale(SIMD3<Float>(0.82, 0.88, 0.28))
+            encoder.setDepthStencilState(translucentDepthState)
             draw(
                 mesh: wing,
                 modelMatrix: wingTransform,
@@ -388,6 +434,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
                 encoder: encoder,
                 viewProjection: viewProjection
             )
+            encoder.setDepthStencilState(depthState)
         }
     }
 
