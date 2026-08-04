@@ -6,36 +6,27 @@ struct LeaderboardView: View {
     let theme: SeasonTheme
 
     @State private var state: LoadState = .loading
-    @State private var isJoining = false
-    @State private var isDeleting = false
-    @State private var showsDeleteConfirmation = false
+    @State private var isResetting = false
+    @State private var showsResetConfirmation = false
 
     var body: some View {
         NavigationStack {
-            Group {
-                if !coordinator.isLeaderboardParticipant {
-                    optedOutContent
-                } else {
-                    loadedContent
-                }
-            }
+            loadedContent
             .navigationTitle("全球排行榜")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("完成") { dismiss() }
                 }
-                if coordinator.isLeaderboardParticipant {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu {
-                            Button("删除匿名身份并退出", role: .destructive) {
-                                showsDeleteConfirmation = true
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("清除我的匿名数据", role: .destructive) {
+                            showsResetConfirmation = true
                         }
-                        .disabled(isDeleting)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
+                    .disabled(isResetting)
                 }
             }
             .background(theme.colors.skyTop.ignoresSafeArea())
@@ -44,17 +35,15 @@ struct LeaderboardView: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .task {
-            if coordinator.isLeaderboardParticipant {
-                await load()
-            }
+            await load()
         }
-        .alert("删除匿名身份？", isPresented: $showsDeleteConfirmation) {
+        .alert("清除匿名数据？", isPresented: $showsResetConfirmation) {
             Button("取消", role: .cancel) {}
-            Button("删除并退出", role: .destructive) {
-                Task { await deleteIdentity() }
+            Button("清除并重置", role: .destructive) {
+                Task { await resetIdentity() }
             }
         } message: {
-            Text("你的公开短码和排行榜记录会被删除。本机累计数会保留；以后重新加入时会获得新的短码。")
+            Text("旧短码、排行榜记录、地球位置和本机个人累计都会删除，并建立一个新的零成绩匿名身份。全球聚合总数不会回退。")
         }
     }
 
@@ -109,21 +98,6 @@ struct LeaderboardView: View {
         .refreshable { await load() }
     }
 
-    private var optedOutContent: some View {
-        ContentUnavailableView {
-            Label("未加入排行榜", systemImage: "trophy")
-        } description: {
-            Text("加入后会生成一个匿名短码，不需要昵称或注册。")
-        } actions: {
-            Button(isJoining ? "正在加入…" : "加入排行榜") {
-                Task { await join() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(theme.colors.accent)
-            .disabled(isJoining)
-        }
-    }
-
     private func load() async {
         state = .loading
         do {
@@ -135,24 +109,12 @@ struct LeaderboardView: View {
         }
     }
 
-    private func join() async {
-        isJoining = true
-        defer { isJoining = false }
+    private func resetIdentity() async {
+        isResetting = true
+        defer { isResetting = false }
         do {
-            try await coordinator.joinLeaderboard()
-            try? await Task.sleep(for: .milliseconds(500))
+            try await coordinator.resetAnonymousIdentity()
             await load()
-        } catch {
-            state = .failed(error.localizedDescription)
-        }
-    }
-
-    private func deleteIdentity() async {
-        isDeleting = true
-        defer { isDeleting = false }
-        do {
-            try await coordinator.deleteLeaderboardIdentity()
-            state = .loading
         } catch {
             state = .failed(error.localizedDescription)
         }

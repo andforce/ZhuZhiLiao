@@ -27,12 +27,44 @@ export function openCounterDatabase(databasePath, initialWahs = 0) {
       token_hash TEXT NOT NULL UNIQUE,
       score INTEGER NOT NULL DEFAULT 0 CHECK (score >= 0),
       has_migrated INTEGER NOT NULL DEFAULT 0 CHECK (has_migrated IN (0, 1)),
+      earth_enabled INTEGER NOT NULL DEFAULT 0 CHECK (earth_enabled IN (0, 1)),
+      location_cell TEXT,
+      location_lat REAL,
+      location_lon REAL,
+      location_updated_at TEXT,
+      last_wah_at INTEGER,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) STRICT;
 
     CREATE INDEX IF NOT EXISTS players_score_index
       ON players(score DESC, public_code ASC);
+  `);
+
+  // SQLite's CREATE TABLE IF NOT EXISTS does not add columns to installations
+  // created by older App Store builds. Keep this migration additive so the
+  // existing counter and leaderboard data remain intact during deployment.
+  const playerColumns = new Set(
+    database.prepare("PRAGMA table_info(players)").all().map((column) => column.name)
+  );
+  const additions = [
+    ["earth_enabled", "INTEGER NOT NULL DEFAULT 0 CHECK (earth_enabled IN (0, 1))"],
+    ["location_cell", "TEXT"],
+    ["location_lat", "REAL"],
+    ["location_lon", "REAL"],
+    ["location_updated_at", "TEXT"],
+    ["last_wah_at", "INTEGER"]
+  ];
+  for (const [name, definition] of additions) {
+    if (!playerColumns.has(name)) {
+      database.exec(`ALTER TABLE players ADD COLUMN ${name} ${definition}`);
+    }
+  }
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS players_earth_location_index
+      ON players(earth_enabled, location_lat, location_lon);
+    CREATE INDEX IF NOT EXISTS players_earth_activity_index
+      ON players(earth_enabled, last_wah_at);
   `);
 
   database.prepare(`
@@ -54,12 +86,18 @@ export function openCounterDatabase(databasePath, initialWahs = 0) {
     VALUES (@id, @publicCode, @tokenHash)
   `);
   const readPlayerByToken = database.prepare(`
-    SELECT id, public_code AS publicCode, score, has_migrated AS hasMigrated
+    SELECT id, public_code AS publicCode, score, has_migrated AS hasMigrated,
+      earth_enabled AS earthEnabled, location_cell AS locationCell,
+      location_lat AS locationLat, location_lon AS locationLon,
+      last_wah_at AS lastWahAt
     FROM players
     WHERE token_hash = ?
   `);
   const readPlayerByID = database.prepare(`
-    SELECT id, public_code AS publicCode, score, has_migrated AS hasMigrated
+    SELECT id, public_code AS publicCode, score, has_migrated AS hasMigrated,
+      earth_enabled AS earthEnabled, location_cell AS locationCell,
+      location_lat AS locationLat, location_lon AS locationLon,
+      last_wah_at AS lastWahAt
     FROM players
     WHERE id = ?
   `);
@@ -83,7 +121,7 @@ export function openCounterDatabase(databasePath, initialWahs = 0) {
     return { ...readPlayerByID.get(playerID), didMigrate: true };
   });
 
-  const submitScore = database.transaction((playerID, targetScore) => {
+  const submitScore = database.transaction((playerID, targetScore, timestamp) => {
     const player = readPlayerByID.get(playerID);
     if (!player || player.hasMigrated !== 1) {
       return undefined;
@@ -93,13 +131,51 @@ export function openCounterDatabase(databasePath, initialWahs = 0) {
     if (delta > 0) {
       database.prepare(`
         UPDATE players
-        SET score = ?, updated_at = CURRENT_TIMESTAMP
+        SET score = ?, last_wah_at = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(targetScore, playerID);
+      `).run(targetScore, timestamp, playerID);
       addWahs.run(delta, GLOBAL_WAHS_KEY);
     }
-    return { score: Math.max(player.score, targetScore), delta };
+    return {
+      score: Math.max(player.score, targetScore),
+      delta,
+      lastWahAt: delta > 0 ? timestamp : player.lastWahAt
+    };
   });
+
+  const enableEarth = database.prepare(`
+    UPDATE players
+    SET earth_enabled = 1,
+      location_cell = @cell,
+      location_lat = @latitude,
+      location_lon = @longitude,
+      location_updated_at = CURRENT_TIMESTAMP,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = @playerID
+  `);
+  const disableEarth = database.prepare(`
+    UPDATE players
+    SET earth_enabled = 0,
+      location_cell = NULL,
+      location_lat = NULL,
+      location_lon = NULL,
+      location_updated_at = NULL,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  const readEarthPlayers = database.prepare(`
+    SELECT id, public_code AS publicCode, score,
+      location_cell AS locationCell,
+      location_lat AS locationLat,
+      location_lon AS locationLon,
+      last_wah_at AS lastWahAt
+    FROM players
+    WHERE earth_enabled = 1
+      AND has_migrated = 1
+      AND location_cell IS NOT NULL
+      AND location_lat IS NOT NULL
+      AND location_lon IS NOT NULL
+  `);
 
   const rankedPlayersSQL = `
     WITH ranked AS (
@@ -151,8 +227,22 @@ export function openCounterDatabase(databasePath, initialWahs = 0) {
       return migratePlayer(playerID, personal, pendingGlobal);
     },
 
-    submitScore(playerID, targetScore) {
-      return submitScore(playerID, targetScore);
+    submitScore(playerID, targetScore, timestamp = Date.now()) {
+      return submitScore(playerID, targetScore, timestamp);
+    },
+
+    setEarthLocation(playerID, location) {
+      enableEarth.run({ playerID, ...location });
+      return readPlayerByID.get(playerID);
+    },
+
+    disableEarth(playerID) {
+      disableEarth.run(playerID);
+      return readPlayerByID.get(playerID);
+    },
+
+    earthPlayers() {
+      return readEarthPlayers.all();
     },
 
     leaderboard(playerID, limit) {

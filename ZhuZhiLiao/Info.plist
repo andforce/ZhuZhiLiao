@@ -26,6 +26,10 @@
 	<false/>
 	<key>NSMotionUsageDescription</key>
 	<string>运动数据仅用于在本机识别手机摇动并控制竹知了，不会上传。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>位置会先在本机量化为约 20 公里格网，用于在哇声地球上显示匿名圆点和共鸣波纹。</string>
+	<key>NSLocationDefaultAccuracyReduced</key>
+	<true/>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiresFullScreen</key>

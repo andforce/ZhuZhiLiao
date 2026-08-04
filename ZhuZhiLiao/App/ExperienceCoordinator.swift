@@ -20,8 +20,12 @@ final class ExperienceCoordinator: ObservableObject {
     @Published private(set) var motionIsAvailable = false
     @Published private(set) var isRunning = false
     @Published private(set) var interactionState: ToyInteractionState = .idle
-    @Published private(set) var isLeaderboardParticipant = true
     @Published private(set) var leaderboardCode: String?
+    @Published private(set) var earthIsEnabled = false
+    @Published private(set) var earthCellID: String?
+    @Published private(set) var earthRevision = 0
+    @Published private(set) var lastLocalWahAt: Date?
+    @Published private(set) var earthIsPresented = false
     private var automaticMode = false
 
     private let motionController: MotionController
@@ -61,8 +65,12 @@ final class ExperienceCoordinator: ObservableObject {
             completedWahs: 0
         )
         isRunningUnitTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        isLeaderboardParticipant = counterService.isLeaderboardParticipant
         leaderboardCode = counterService.publicCode
+        earthIsEnabled = counterService.earthIsEnabled
+        earthCellID = counterService.earthCellID
+        counterService.earthRevisionHandler = { [weak self] revision in
+            self?.earthRevision = revision
+        }
     }
 
     func start() {
@@ -165,8 +173,9 @@ final class ExperienceCoordinator: ObservableObject {
             activity = frame.state.activity
             stats = counterService.stats
             personalWahs = counterService.personalWahs
-            isLeaderboardParticipant = counterService.isLeaderboardParticipant
             leaderboardCode = counterService.publicCode
+            earthIsEnabled = counterService.earthIsEnabled
+            earthCellID = counterService.earthCellID
             interactionState = resolvedInteractionState(for: frame)
         }
 
@@ -184,16 +193,35 @@ final class ExperienceCoordinator: ObservableObject {
         try await counterService.loadLeaderboard()
     }
 
-    func joinLeaderboard() async throws {
-        try await counterService.joinLeaderboard()
-        isLeaderboardParticipant = counterService.isLeaderboardParticipant
+    func resetAnonymousIdentity() async throws {
+        try await counterService.resetAnonymousIdentity()
         leaderboardCode = counterService.publicCode
+        personalWahs = counterService.personalWahs
+        earthIsEnabled = counterService.earthIsEnabled
+        earthCellID = counterService.earthCellID
     }
 
-    func deleteLeaderboardIdentity() async throws {
-        try await counterService.deleteLeaderboardIdentity()
-        isLeaderboardParticipant = counterService.isLeaderboardParticipant
-        leaderboardCode = counterService.publicCode
+    func setEarthLocation(cellID: String) async throws {
+        try await counterService.setEarthLocation(cellID: cellID)
+        earthIsEnabled = counterService.earthIsEnabled
+        earthCellID = counterService.earthCellID
+    }
+
+    func disableEarth() async throws {
+        try await counterService.disableEarth()
+        earthIsEnabled = false
+        earthCellID = nil
+    }
+
+    func loadEarthSnapshot(
+        detail: Int,
+        bounds: [EarthBounds] = []
+    ) async throws -> EarthSnapshot {
+        try await counterService.loadEarthSnapshot(detail: detail, bounds: bounds)
+    }
+
+    func setEarthPresented(_ isPresented: Bool) {
+        earthIsPresented = isPresented
     }
 
     private func startSimulationLoop() {
@@ -270,6 +298,8 @@ final class ExperienceCoordinator: ObservableObject {
             hapticFeedback.update(with: frame)
             if frame.completedWahs > 0 {
                 counterService.record(wahs: frame.completedWahs)
+                personalWahs = counterService.personalWahs
+                lastLocalWahAt = Date()
             }
         }
     }

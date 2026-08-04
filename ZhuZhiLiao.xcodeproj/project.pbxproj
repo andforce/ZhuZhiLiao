@@ -40,6 +40,14 @@
 		D10000000000000000000006 /* SeasonThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000006 /* SeasonThemeTests.swift */; };
 		E10000000000000000000001 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000001 /* LeaderboardView.swift */; };
 		E10000000000000000000002 /* PlayerIdentityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* PlayerIdentityStore.swift */; };
+		F10000000000000000000001 /* EarthBoundaryLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* EarthBoundaryLoader.swift */; };
+		F10000000000000000000002 /* EarthFeatureModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002 /* EarthFeatureModel.swift */; };
+		F10000000000000000000003 /* EarthLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* EarthLocationService.swift */; };
+		F10000000000000000000004 /* WahEarthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004 /* WahEarthView.swift */; };
+		F10000000000000000000005 /* EarthMetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000005 /* EarthMetalRenderer.swift */; };
+		F10000000000000000000006 /* EarthMetalSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000006 /* EarthMetalSurface.swift */; };
+		F10000000000000000000007 /* ne_110m_admin_0_countries.geojson in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000007 /* ne_110m_admin_0_countries.geojson */; };
+		F10000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +97,14 @@
 		D20000000000000000000006 /* SeasonThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonThemeTests.swift; sourceTree = "<group>"; };
 		E20000000000000000000001 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		E20000000000000000000002 /* PlayerIdentityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerIdentityStore.swift; sourceTree = "<group>"; };
+		F20000000000000000000001 /* EarthBoundaryLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthBoundaryLoader.swift; sourceTree = "<group>"; };
+		F20000000000000000000002 /* EarthFeatureModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthFeatureModel.swift; sourceTree = "<group>"; };
+		F20000000000000000000003 /* EarthLocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthLocationService.swift; sourceTree = "<group>"; };
+		F20000000000000000000004 /* WahEarthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WahEarthView.swift; sourceTree = "<group>"; };
+		F20000000000000000000005 /* EarthMetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthMetalRenderer.swift; sourceTree = "<group>"; };
+		F20000000000000000000006 /* EarthMetalSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthMetalSurface.swift; sourceTree = "<group>"; };
+		F20000000000000000000007 /* ne_110m_admin_0_countries.geojson */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ne_110m_admin_0_countries.geojson; sourceTree = "<group>"; };
+		F20000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ne_110m_admin_1_states_provinces.geojson; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -150,6 +166,8 @@
 		BB1370258B8197ACFBAFC78D /* Rendering */ = {
 			isa = PBXGroup;
 			children = (
+				F20000000000000000000005 /* EarthMetalRenderer.swift */,
+				F20000000000000000000006 /* EarthMetalSurface.swift */,
 				3E20C0A95C70EF4DDCBD2BA0 /* MatrixMath.swift */,
 				3DB3D9C2620F8EE2B4121D9F /* MeshGenerator.swift */,
 				E210088C96B2163A7E7B033A /* MetalRenderer.swift */,
@@ -189,6 +207,7 @@
 				8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */,
 				FE0BFE4C8FFE8790E89F59A7 /* App */,
 				B0A70AC71037ED88F39D8CDD /* Audio */,
+				F30000000000000000000001 /* Earth */,
 				5C53237516DDC89C41C65F69 /* Motion */,
 				0340383EB9EC699A99E97BDE /* Network */,
 				A050BBC6D159884B542230FE /* Physics */,
@@ -212,6 +231,27 @@
 				0FB32B89136CB0CC426F50DC /* ZhuZhiLiaoApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		F30000000000000000000001 /* Earth */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000001 /* EarthBoundaryLoader.swift */,
+				F20000000000000000000002 /* EarthFeatureModel.swift */,
+				F20000000000000000000003 /* EarthLocationService.swift */,
+				F20000000000000000000004 /* WahEarthView.swift */,
+				F30000000000000000000002 /* Resources */,
+			);
+			path = Earth;
+			sourceTree = "<group>";
+		};
+		F30000000000000000000002 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F20000000000000000000007 /* ne_110m_admin_0_countries.geojson */,
+				F20000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -290,6 +330,8 @@
 				1EA01DE331DBD8ABF1443EEE /* Assets.xcassets in Resources */,
 				1F4F96C24625DEC9F4196702 /* PrivacyInfo.xcprivacy in Resources */,
 				379876F49D064C15F8F60993 /* zhuzhiliao-loop.m4a in Resources */,
+				F10000000000000000000007 /* ne_110m_admin_0_countries.geojson in Resources */,
+				F10000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -317,6 +359,11 @@
 				020847E398F2A9D38A2720DB /* CounterCodec.swift in Sources */,
 				17619AAA8C32B3F58CAA4125 /* CounterService.swift in Sources */,
 				C91158065EC8B647A0CCF75E /* ExperienceCoordinator.swift in Sources */,
+				F10000000000000000000001 /* EarthBoundaryLoader.swift in Sources */,
+				F10000000000000000000002 /* EarthFeatureModel.swift in Sources */,
+				F10000000000000000000003 /* EarthLocationService.swift in Sources */,
+				F10000000000000000000005 /* EarthMetalRenderer.swift in Sources */,
+				F10000000000000000000006 /* EarthMetalSurface.swift in Sources */,
 				D10000000000000000000001 /* ExperienceHUD.swift in Sources */,
 				E10000000000000000000001 /* LeaderboardView.swift in Sources */,
 				444F16515F0614D1139B879A /* MatrixMath.swift in Sources */,
@@ -336,6 +383,7 @@
 				929AA2BD94E2EFDD87E11EA3 /* ToyAudioEngine.swift in Sources */,
 				C879664EB9EA6773D56E99CC /* ToySimulation.swift in Sources */,
 				4C1619F1DEDB2B6189743AED /* WahOutbox.swift in Sources */,
+				F10000000000000000000004 /* WahEarthView.swift in Sources */,
 				7615960140B6B967D19C87A8 /* ZhuZhiLiaoApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

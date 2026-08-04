@@ -6,9 +6,9 @@
 ## 数据边界
 
 - “此刻在线”只保存在进程内，重启归零。
-- “全球共鸣”、匿名玩家、公开六位短码和累计成绩保存在 SQLite。
+- “全球共鸣”、匿名玩家、公开六位短码、累计成绩和自愿加入的地球格网保存在 SQLite。
 - 玩家令牌仅在创建时返回明文；数据库只保存 SHA-256 哈希。
-- 服务不接收 iPhone 硬件 ID、昵称、位置或动作传感器原始数据。
+- 服务不接收 iPhone 硬件 ID、昵称、原始经纬度或动作传感器原始数据；地球接口只接受客户端生成的约 20 公里格网 ID。
 - 旧版本仍可匿名连接并贡献全球聚合数，但不会出现在排行榜中。
 
 SQLite 使用 WAL、事务性个人/全球递增和 5 秒 busy timeout。生产环境必须只运行一个 Node 实例。
@@ -18,6 +18,8 @@ SQLite 使用 WAL、事务性个人/全球递增和 5 秒 busy timeout。生产�
 - `POST /api/players`：创建匿名玩家，返回 `{id, code, token}`。
 - `GET /api/leaderboard?limit=100`：Bearer 认证，返回前 100 名、参与人数和当前玩家。
 - `DELETE /api/players/me`：Bearer 认证，删除匿名身份和排名。
+- `PUT /api/players/me/earth`：Bearer 认证，提交 `{enabled:true, cellID:"v1:…"}` 加入或更新地球格网。
+- `DELETE /api/players/me/earth`：清除地球格网，不删除排行榜成绩。
 - `GET /api/stats`：返回 `{online, wahs}`。
 - `GET /healthz`：健康检查。
 
@@ -26,7 +28,7 @@ SQLite 使用 WAL、事务性个人/全球递增和 5 秒 busy timeout。生产�
 新客户端连接 `/api/ws` 时通过 `Authorization: Bearer <token>` 认证。服务端首先发送玩家状态：
 
 ```json
-{"t":"player","id":"…","code":"A7K3M9","score":12,"migrated":true}
+{"t":"player","id":"…","code":"A7K3M9","score":12,"migrated":true,"earthEnabled":true,"locationCell":"v1:500:1002"}
 ```
 
 旧本地成绩只允许迁移一次：
@@ -39,7 +41,15 @@ SQLite 使用 WAL、事务性个人/全球递增和 5 秒 busy timeout。生产�
 
 ```json
 {"t":"score","value":15}
-{"t":"score","score":15}
+{"t":"score","score":15,"lastWahAt":1785852800000}
+```
+
+地球页面按缩放层级请求快照；`detail` 为 0–3 时返回地理聚合节点，4 返回个人点。成绩、位置变化后，已订阅客户端会收到 `earth_revision` 并重新请求当前镜头：
+
+```json
+{"t":"earth_view","requestID":"…","detail":2,"bounds":[]}
+{"t":"earth_snapshot","requestID":"…","serverTime":1785852800000,"revision":3,"nodes":[]}
+{"t":"earth_revision","revision":4}
 ```
 
 连接成功和统计变化时广播：

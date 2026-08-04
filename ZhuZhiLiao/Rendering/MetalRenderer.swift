@@ -192,6 +192,7 @@ final class MetalRenderer: NSObject, MTKViewDelegate {
     func draw(in view: MTKView) {
         guard !isRunningUnitTests,
               coordinator.isRunning,
+              !coordinator.earthIsPresented,
               let renderPassDescriptor = view.currentRenderPassDescriptor,
               let drawable = view.currentDrawable,
               let commandBuffer = commandQueue.makeCommandBuffer(),

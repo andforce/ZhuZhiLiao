@@ -7,6 +7,7 @@ struct ContentView: View {
     @ObservedObject var coordinator: ExperienceCoordinator
     @AppStorage("zzl_safety_intro_seen") private var hasSeenSafetyIntroduction = false
     @State private var presentedSheet: AppSheet?
+    @State private var presentedCover: AppCover?
 
     private let isRunningUnitTests = ProcessInfo.processInfo.environment[
         "XCTestConfigurationFilePath"
@@ -26,6 +27,7 @@ struct ContentView: View {
                 coordinator: coordinator,
                 theme: themeStore.selectedTheme,
                 showThemePicker: showThemePicker,
+                showEarth: showEarth,
                 showLeaderboard: showLeaderboard
             )
 
@@ -48,6 +50,15 @@ struct ContentView: View {
                 )
             }
         }
+        .fullScreenCover(item: $presentedCover) { cover in
+            switch cover {
+            case .earth:
+                WahEarthView(
+                    coordinator: coordinator,
+                    theme: themeStore.selectedTheme
+                )
+            }
+        }
         .onAppear(perform: coordinator.start)
         .onChange(of: scenePhase, handleScenePhaseChange)
     }
@@ -58,6 +69,10 @@ struct ContentView: View {
 
     private func showLeaderboard() {
         presentedSheet = .leaderboard
+    }
+
+    private func showEarth() {
+        presentedCover = .earth
     }
 
     private func finishSafetyIntroduction() {
@@ -84,6 +99,11 @@ private enum AppSheet: String, Identifiable {
     case themePicker
     case leaderboard
 
+    var id: String { rawValue }
+}
+
+private enum AppCover: String, Identifiable {
+    case earth
     var id: String { rawValue }
 }
 

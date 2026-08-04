@@ -21,16 +21,17 @@
 - App Review 联系信息和审核说明
 - 无演示账号声明
 - App 隐私填写依据和隐私政策正文
-- 隐私清单申报匿名 User ID 与产品交互；不申报应用未读取的硬件设备标识符
+- 隐私清单申报匿名 User ID、产品交互与用户自愿提供的粗略位置；不申报应用未读取的硬件设备标识符或精确位置
 - iPhone 商店截图生成、人工核验和上传
 - Release 归档、App Store 分发导出、构建上传和版本关联
-- 内容版权声明：仅使用自行录制或自有内容，不使用第三方内容
+- 内容版权声明：音频与美术为自行录制或自有内容；地球边界使用公有领域的 Natural Earth 数据
 - 销售范围：全球 175 个国家和地区，并自动包含未来新增地区
 
 ## 提交前仍需完成
 
 1. 将 `submission/privacy-policy-zh-Hans.md` 发布到公开 HTTPS 页面，并把 URL 填入简体中文 App 信息。
 2. 按 `submission/app-privacy-answers-zh-Hans.md` 在 App Store Connect 发布 App 隐私回答。
+3. 在目标销售地区完成 Natural Earth 默认边界口径的地图合规审查。
 
 完成以上项目后，再运行：
 

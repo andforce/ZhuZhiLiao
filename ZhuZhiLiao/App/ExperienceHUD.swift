@@ -4,6 +4,7 @@ struct ExperienceHUD: View {
     @ObservedObject var coordinator: ExperienceCoordinator
     let theme: SeasonTheme
     let showThemePicker: () -> Void
+    let showEarth: () -> Void
     let showLeaderboard: () -> Void
 
     var body: some View {
@@ -11,13 +12,17 @@ struct ExperienceHUD: View {
             ExperienceHeader(
                 theme: theme,
                 showThemePicker: showThemePicker,
-                showLeaderboard: showLeaderboard,
-                recalibrate: coordinator.recalibrate
+                showEarth: showEarth,
+                showLeaderboard: showLeaderboard
             )
 
             Spacer(minLength: 210)
 
-            ExperienceDashboard(coordinator: coordinator, theme: theme)
+            ExperienceDashboard(
+                coordinator: coordinator,
+                theme: theme,
+                recalibrate: coordinator.recalibrate
+            )
         }
         .safeAreaPadding(.horizontal, 18)
         .safeAreaPadding(.top, 10)
@@ -28,17 +33,35 @@ struct ExperienceHUD: View {
 private struct ExperienceHeader: View {
     let theme: SeasonTheme
     let showThemePicker: () -> Void
+    let showEarth: () -> Void
     let showLeaderboard: () -> Void
-    let recalibrate: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            BrandLockup(theme: theme)
+        ViewThatFits(in: .horizontal) {
+            row {
+                BrandLockup(theme: theme)
+            }
+            row {
+                Text("竹知了")
+                    .font(.custom("Songti SC", size: 23, relativeTo: .title2))
+                    .foregroundStyle(.white.opacity(0.94))
+                    .fixedSize()
+                    .accessibilityLabel("赛博竹知了")
+            }
+        }
+    }
 
-            Spacer(minLength: 8)
+    private func row<Brand: View>(@ViewBuilder brand: () -> Brand) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            brand()
+            Spacer(minLength: 2)
+            actions
+        }
+    }
 
-            SeasonalGlassGroup(spacing: 10) {
-                HStack(spacing: 10) {
+    private var actions: some View {
+        SeasonalGlassGroup(spacing: 7) {
+            HStack(spacing: 7) {
                     HeaderActionButton(
                         title: theme.displayName,
                         symbol: theme.symbolName,
@@ -48,13 +71,13 @@ private struct ExperienceHeader: View {
                     .accessibilityLabel("选择季节主题，当前是\(theme.displayName)季")
 
                     HeaderActionButton(
-                        title: "校准",
-                        symbol: "scope",
+                        title: "地球",
+                        symbol: "globe.asia.australia.fill",
                         theme: theme,
-                        action: recalibrate
+                        action: showEarth
                     )
-                    .accessibilityLabel("校准")
-                    .accessibilityHint("把当前握持方向设为新的起始方向")
+                    .accessibilityLabel("哇声地球")
+                    .accessibilityHint("查看世界各地的哇声和两分钟共鸣波纹")
 
                     HeaderActionButton(
                         title: "排行",
@@ -64,7 +87,6 @@ private struct ExperienceHeader: View {
                     )
                     .accessibilityLabel("排行榜")
                     .accessibilityHint("查看全球累计排行榜和我的名次")
-                }
             }
         }
     }
@@ -129,14 +151,28 @@ private struct HeaderActionButton: View {
 private struct ExperienceDashboard: View {
     @ObservedObject var coordinator: ExperienceCoordinator
     let theme: SeasonTheme
+    let recalibrate: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
-            SpeedReadout(
-                revolutionsPerSecond: coordinator.revolutionsPerSecond,
-                theme: theme
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(alignment: .bottom) {
+                SpeedReadout(
+                    revolutionsPerSecond: coordinator.revolutionsPerSecond,
+                    theme: theme
+                )
+
+                Spacer(minLength: 12)
+
+                HeaderActionButton(
+                    title: "校准",
+                    symbol: "scope",
+                    theme: theme,
+                    action: recalibrate
+                )
+                .accessibilityLabel("重新定位")
+                .accessibilityHint("把当前握持方向设为新的起始方向")
+            }
+            .frame(maxWidth: .infinity)
 
             InstructionPanel(state: coordinator.interactionState, theme: theme)
 

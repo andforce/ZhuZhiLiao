@@ -151,7 +151,9 @@ test("creates an anonymous player and idempotently advances their score", async 
     id: player.id,
     code: player.code,
     score: 0,
-    migrated: false
+    migrated: false,
+    earthEnabled: false,
+    locationCell: null
   });
 
   client.socket.send(JSON.stringify({ t: "migrate", personal: 0, pendingGlobal: 0 }));
@@ -161,10 +163,10 @@ test("creates an anonymous player and idempotently advances their score", async 
   );
 
   client.socket.send(JSON.stringify({ t: "score", value: 7 }));
-  assert.deepEqual(
-    JSON.parse(await client.next((text) => text.includes('"t":"score"'))),
-    { t: "score", score: 7 }
-  );
+  const scoreMessage = JSON.parse(await client.next((text) => text.includes('"t":"score"')));
+  assert.equal(scoreMessage.t, "score");
+  assert.equal(scoreMessage.score, 7);
+  assert.ok(Number.isSafeInteger(scoreMessage.lastWahAt));
   client.socket.send(JSON.stringify({ t: "score", value: 7 }));
   await client.next((text) => text.includes('"t":"score"'));
 
@@ -250,4 +252,87 @@ test("requires a valid token and deletes a leaderboard identity", async () => {
     headers: authorization(player).headers
   });
   assert.equal(afterDelete.status, 401);
+});
+
+test("publishes opt-in earth points, activity, clusters, and removal", async () => {
+  const server = await startServer(":memory:");
+  const player = await createPlayer(server.httpURL);
+  const client = connect(server.wsURL, authorization(player));
+  cleanups.push(() => client.socket.terminate());
+  await client.next((text) => text.includes('"t":"player"'));
+  client.socket.send(JSON.stringify({ t: "migrate", personal: 0, pendingGlobal: 0 }));
+  await client.next((text) => text.includes('"t":"migration"'));
+
+  const enabled = await fetch(`${server.httpURL}/api/players/me/earth`, {
+    method: "PUT",
+    headers: {
+      ...authorization(player).headers,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ enabled: true, cellID: "v1:500:1002" })
+  });
+  assert.equal(enabled.status, 200);
+  assert.equal((await enabled.json()).cellID, "v1:500:1002");
+
+  client.socket.send(JSON.stringify({
+    t: "earth_view",
+    requestID: "individual",
+    detail: 4,
+    bounds: []
+  }));
+  const initial = JSON.parse(await client.next((text) => text.includes('"requestID":"individual"')));
+  assert.equal(initial.nodes.length, 1);
+  assert.equal(initial.nodes[0].kind, "player");
+  assert.equal(initial.nodes[0].isMe, true);
+  assert.equal(initial.nodes[0].activeUntil, null);
+
+  client.socket.send(JSON.stringify({ t: "score", value: 3 }));
+  const score = JSON.parse(await client.next((text) => text.includes('"t":"score"')));
+  client.socket.send(JSON.stringify({
+    t: "earth_view",
+    requestID: "cluster",
+    detail: 0,
+    bounds: []
+  }));
+  const clustered = JSON.parse(await client.next((text) => text.includes('"requestID":"cluster"')));
+  assert.equal(clustered.nodes.length, 1);
+  assert.deepEqual(
+    {
+      kind: clustered.nodes[0].kind,
+      userCount: clustered.nodes[0].userCount,
+      totalWahs: clustered.nodes[0].totalWahs,
+      activeCount: clustered.nodes[0].activeCount,
+      containsMe: clustered.nodes[0].containsMe
+    },
+    { kind: "cluster", userCount: 1, totalWahs: 3, activeCount: 1, containsMe: true }
+  );
+  assert.equal(clustered.nodes[0].activeUntil, score.lastWahAt + 120_000);
+
+  const removed = await fetch(`${server.httpURL}/api/players/me/earth`, {
+    method: "DELETE",
+    headers: authorization(player).headers
+  });
+  assert.equal(removed.status, 204);
+  client.socket.send(JSON.stringify({
+    t: "earth_view",
+    requestID: "removed",
+    detail: 4,
+    bounds: []
+  }));
+  const empty = JSON.parse(await client.next((text) => text.includes('"requestID":"removed"')));
+  assert.deepEqual(empty.nodes, []);
+});
+
+test("rejects malformed earth cells without storing a location", async () => {
+  const server = await startServer(":memory:");
+  const player = await createPlayer(server.httpURL);
+  const response = await fetch(`${server.httpURL}/api/players/me/earth`, {
+    method: "PUT",
+    headers: {
+      ...authorization(player).headers,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ enabled: true, cellID: "v1:9999:0" })
+  });
+  assert.equal(response.status, 400);
 });

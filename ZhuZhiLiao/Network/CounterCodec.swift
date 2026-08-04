@@ -19,11 +19,63 @@ struct LeaderboardSnapshot: Codable, Equatable, Sendable {
     let me: LeaderboardEntry?
 }
 
+struct EarthBounds: Codable, Equatable, Sendable {
+    let minLatitude: Double
+    let maxLatitude: Double
+    let minLongitude: Double
+    let maxLongitude: Double
+}
+
+struct EarthNode: Codable, Equatable, Identifiable, Sendable {
+    enum Kind: String, Codable, Sendable {
+        case player
+        case cluster
+    }
+
+    let kind: Kind
+    let id: String
+    let code: String?
+    let score: Int?
+    let latitude: Double
+    let longitude: Double
+    let userCount: Int?
+    let totalWahs: Int?
+    let activeCount: Int?
+    let activeUntil: Int64?
+    let isMe: Bool?
+    let containsMe: Bool?
+
+    var displayedWahs: Int { score ?? totalWahs ?? 0 }
+    var displayedUsers: Int { userCount ?? 1 }
+    var highlightsMe: Bool { isMe == true || containsMe == true }
+
+    func isActive(serverNow: Int64) -> Bool {
+        guard let activeUntil else { return false }
+        return activeUntil > serverNow
+    }
+}
+
+struct EarthSnapshot: Codable, Equatable, Sendable {
+    let requestID: String
+    let serverTime: Int64
+    let revision: Int
+    let nodes: [EarthNode]
+}
+
 enum CounterServerMessage: Equatable, Sendable {
     case stats(CounterStats)
-    case player(id: String, code: String, score: Int, migrated: Bool)
+    case player(
+        id: String,
+        code: String,
+        score: Int,
+        migrated: Bool,
+        earthEnabled: Bool,
+        locationCell: String?
+    )
     case migration(score: Int)
-    case score(Int)
+    case score(value: Int, lastWahAt: Int64?)
+    case earthSnapshot(EarthSnapshot)
+    case earthRevision(Int)
     case other
 }
 
@@ -44,6 +96,13 @@ enum CounterCodec {
         let pendingGlobal: Int
     }
 
+    private struct EarthViewMessage: Encodable {
+        let t = "earth_view"
+        let requestID: String
+        let detail: Int
+        let bounds: [EarthBounds]
+    }
+
     private struct MessageEnvelope: Decodable {
         let t: String
         let online: Int?
@@ -52,6 +111,10 @@ enum CounterCodec {
         let code: String?
         let score: Int?
         let migrated: Bool?
+        let earthEnabled: Bool?
+        let locationCell: String?
+        let lastWahAt: Int64?
+        let revision: Int?
     }
 
     static func wah(count: Int) throws -> String {
@@ -66,6 +129,18 @@ enum CounterCodec {
         try string(MigrationMessage(
             personal: max(personal, 0),
             pendingGlobal: min(max(pendingGlobal, 0), max(personal, 0))
+        ))
+    }
+
+    static func earthView(
+        requestID: String,
+        detail: Int,
+        bounds: [EarthBounds]
+    ) throws -> String {
+        try string(EarthViewMessage(
+            requestID: requestID,
+            detail: min(max(detail, 0), 4),
+            bounds: bounds
         ))
     }
 
@@ -84,7 +159,14 @@ enum CounterCodec {
                   let migrated = envelope.migrated else {
                 throw corrupted("玩家消息缺少字段")
             }
-            return .player(id: id, code: code, score: score, migrated: migrated)
+            return .player(
+                id: id,
+                code: code,
+                score: score,
+                migrated: migrated,
+                earthEnabled: envelope.earthEnabled ?? false,
+                locationCell: envelope.locationCell
+            )
         case "migration":
             guard let score = envelope.score else {
                 throw corrupted("迁移消息缺少分数")
@@ -94,7 +176,14 @@ enum CounterCodec {
             guard let score = envelope.score else {
                 throw corrupted("分数确认缺少分数")
             }
-            return .score(score)
+            return .score(value: score, lastWahAt: envelope.lastWahAt)
+        case "earth_snapshot":
+            return .earthSnapshot(try JSONDecoder().decode(EarthSnapshot.self, from: data))
+        case "earth_revision":
+            guard let revision = envelope.revision else {
+                throw corrupted("地球修订消息缺少版本")
+            }
+            return .earthRevision(revision)
         default:
             return .other
         }
