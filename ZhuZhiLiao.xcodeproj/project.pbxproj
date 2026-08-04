@@ -38,6 +38,8 @@
 		D10000000000000000000004 /* SeasonalGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000004 /* SeasonalGlass.swift */; };
 		D10000000000000000000005 /* ThemePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000005 /* ThemePickerView.swift */; };
 		D10000000000000000000006 /* SeasonThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000006 /* SeasonThemeTests.swift */; };
+		E10000000000000000000001 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000001 /* LeaderboardView.swift */; };
+		E10000000000000000000002 /* PlayerIdentityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* PlayerIdentityStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -85,6 +87,8 @@
 		D20000000000000000000004 /* SeasonalGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonalGlass.swift; sourceTree = "<group>"; };
 		D20000000000000000000005 /* ThemePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePickerView.swift; sourceTree = "<group>"; };
 		D20000000000000000000006 /* SeasonThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonThemeTests.swift; sourceTree = "<group>"; };
+		E20000000000000000000001 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
+		E20000000000000000000002 /* PlayerIdentityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerIdentityStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -93,6 +97,7 @@
 			children = (
 				A1B5E2E6D3523451131D6323 /* CounterCodec.swift */,
 				2FD2B1A909B797795A1533BA /* CounterService.swift */,
+				E20000000000000000000002 /* PlayerIdentityStore.swift */,
 				9D357BD872CCDE095BA20310 /* WahOutbox.swift */,
 			);
 			path = Network;
@@ -199,6 +204,7 @@
 				3CC88CB70B0B26E0E40C92A2 /* ContentView.swift */,
 				AF143CF9EB5830A32607B531 /* ExperienceCoordinator.swift */,
 				D20000000000000000000001 /* ExperienceHUD.swift */,
+				E20000000000000000000001 /* LeaderboardView.swift */,
 				D20000000000000000000002 /* SafetyIntroduction.swift */,
 				D20000000000000000000003 /* SeasonTheme.swift */,
 				D20000000000000000000004 /* SeasonalGlass.swift */,
@@ -312,12 +318,14 @@
 				17619AAA8C32B3F58CAA4125 /* CounterService.swift in Sources */,
 				C91158065EC8B647A0CCF75E /* ExperienceCoordinator.swift in Sources */,
 				D10000000000000000000001 /* ExperienceHUD.swift in Sources */,
+				E10000000000000000000001 /* LeaderboardView.swift in Sources */,
 				444F16515F0614D1139B879A /* MatrixMath.swift in Sources */,
 				997BBC4085E8ADFD7D4416D7 /* MeshGenerator.swift in Sources */,
 				4324C25CA6E8E2988AAC1CB7 /* MetalRenderer.swift in Sources */,
 				1B1DAFF096907932D0431D0A /* MetalSurface.swift in Sources */,
 				4736DC2D3C44B6CE7D4EC7AD /* MotionController.swift in Sources */,
 				85D24223A6DAB41B473ECAAE /* MotionSampleFilter.swift in Sources */,
+				E10000000000000000000002 /* PlayerIdentityStore.swift in Sources */,
 				B5350D5475F7D69F242F02C8 /* OrbitCounter.swift in Sources */,
 				595E619532C58851ECED417A /* RenderSnapshot.swift in Sources */,
 				D10000000000000000000002 /* SafetyIntroduction.swift in Sources */,
@@ -350,7 +358,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202608031539;
+				CURRENT_PROJECT_VERSION = 202608040533;
 				DEVELOPMENT_TEAM = RH9H7T7RBU;
 				INFOPLIST_FILE = ZhuZhiLiao/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -472,7 +480,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202608031539;
+				CURRENT_PROJECT_VERSION = 202608040533;
 				DEVELOPMENT_TEAM = RH9H7T7RBU;
 				INFOPLIST_FILE = ZhuZhiLiao/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

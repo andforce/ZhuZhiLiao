@@ -20,6 +20,8 @@ final class ExperienceCoordinator: ObservableObject {
     @Published private(set) var motionIsAvailable = false
     @Published private(set) var isRunning = false
     @Published private(set) var interactionState: ToyInteractionState = .idle
+    @Published private(set) var isLeaderboardParticipant = true
+    @Published private(set) var leaderboardCode: String?
     private var automaticMode = false
 
     private let motionController: MotionController
@@ -59,6 +61,8 @@ final class ExperienceCoordinator: ObservableObject {
             completedWahs: 0
         )
         isRunningUnitTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        isLeaderboardParticipant = counterService.isLeaderboardParticipant
+        leaderboardCode = counterService.publicCode
     }
 
     func start() {
@@ -161,6 +165,8 @@ final class ExperienceCoordinator: ObservableObject {
             activity = frame.state.activity
             stats = counterService.stats
             personalWahs = counterService.personalWahs
+            isLeaderboardParticipant = counterService.isLeaderboardParticipant
+            leaderboardCode = counterService.publicCode
             interactionState = resolvedInteractionState(for: frame)
         }
 
@@ -172,6 +178,22 @@ final class ExperienceCoordinator: ObservableObject {
             rotationRate: latestRotationRate,
             emittedWahs: emittedWahs
         )
+    }
+
+    func loadLeaderboard() async throws -> LeaderboardSnapshot {
+        try await counterService.loadLeaderboard()
+    }
+
+    func joinLeaderboard() async throws {
+        try await counterService.joinLeaderboard()
+        isLeaderboardParticipant = counterService.isLeaderboardParticipant
+        leaderboardCode = counterService.publicCode
+    }
+
+    func deleteLeaderboardIdentity() async throws {
+        try await counterService.deleteLeaderboardIdentity()
+        isLeaderboardParticipant = counterService.isLeaderboardParticipant
+        leaderboardCode = counterService.publicCode
     }
 
     private func startSimulationLoop() {

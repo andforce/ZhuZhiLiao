@@ -4,12 +4,14 @@ struct ExperienceHUD: View {
     @ObservedObject var coordinator: ExperienceCoordinator
     let theme: SeasonTheme
     let showThemePicker: () -> Void
+    let showLeaderboard: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             ExperienceHeader(
                 theme: theme,
                 showThemePicker: showThemePicker,
+                showLeaderboard: showLeaderboard,
                 recalibrate: coordinator.recalibrate
             )
 
@@ -26,6 +28,7 @@ struct ExperienceHUD: View {
 private struct ExperienceHeader: View {
     let theme: SeasonTheme
     let showThemePicker: () -> Void
+    let showLeaderboard: () -> Void
     let recalibrate: () -> Void
 
     var body: some View {
@@ -50,7 +53,17 @@ private struct ExperienceHeader: View {
                         theme: theme,
                         action: recalibrate
                     )
+                    .accessibilityLabel("校准")
                     .accessibilityHint("把当前握持方向设为新的起始方向")
+
+                    HeaderActionButton(
+                        title: "排行",
+                        symbol: "trophy",
+                        theme: theme,
+                        action: showLeaderboard
+                    )
+                    .accessibilityLabel("排行榜")
+                    .accessibilityHint("查看全球累计排行榜和我的名次")
                 }
             }
         }
@@ -101,14 +114,15 @@ private struct HeaderActionButton: View {
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: symbol)
-                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .labelStyle(.iconOnly)
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.90))
-                .padding(.horizontal, 10)
-                .frame(minHeight: 44)
-                .contentShape(Capsule())
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .seasonalGlass(theme: theme, cornerRadius: 22, interactive: true)
+        .fixedSize()
     }
 }
 

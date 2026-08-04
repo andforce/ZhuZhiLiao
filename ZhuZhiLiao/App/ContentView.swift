@@ -25,7 +25,8 @@ struct ContentView: View {
             ExperienceHUD(
                 coordinator: coordinator,
                 theme: themeStore.selectedTheme,
-                showThemePicker: showThemePicker
+                showThemePicker: showThemePicker,
+                showLeaderboard: showLeaderboard
             )
 
             if !hasSeenSafetyIntroduction {
@@ -40,6 +41,11 @@ struct ContentView: View {
             switch sheet {
             case .themePicker:
                 ThemePickerView(themeStore: themeStore)
+            case .leaderboard:
+                LeaderboardView(
+                    coordinator: coordinator,
+                    theme: themeStore.selectedTheme
+                )
             }
         }
         .onAppear(perform: coordinator.start)
@@ -48,6 +54,10 @@ struct ContentView: View {
 
     private func showThemePicker() {
         presentedSheet = .themePicker
+    }
+
+    private func showLeaderboard() {
+        presentedSheet = .leaderboard
     }
 
     private func finishSafetyIntroduction() {
@@ -72,6 +82,7 @@ struct ContentView: View {
 
 private enum AppSheet: String, Identifiable {
     case themePicker
+    case leaderboard
 
     var id: String { rawValue }
 }
