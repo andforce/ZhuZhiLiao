@@ -30,7 +30,7 @@
 ## 技术栈
 
 - iOS 客户端：Swift 6、SwiftUI、Metal / MetalKit、Core Motion、Core Location、AVFoundation、Keychain
-- Android 客户端：Kotlin、传统 View、OpenGL ES 3.0、Android Sensors、SoundPool
+- Android 客户端：Kotlin、传统 View、OpenGL ES 3.0、Android Sensors、SoundPool / MediaPlayer
 - 服务端：Node.js、WebSocket、SQLite
 - 平台：iPhone（iOS 17.0+）与 Android 手机（Android 10+），竖屏
 

@@ -47,8 +47,10 @@ class EarthActivity : AppCompatActivity() {
     private lateinit var topBar: LinearLayout
     private lateinit var bottomContainer: FrameLayout
     private lateinit var autoButton: View
+    private lateinit var muteButton: View
     private lateinit var optionsButton: View
     private var autoRotationEnabled = true
+    private var isAudioMuted = false
     private var pendingLocationRequest = false
     private var joinDialog: BottomSheetDialog? = null
     private var joinActionButton: MaterialButton? = null
@@ -74,6 +76,8 @@ class EarthActivity : AppCompatActivity() {
         }
         theme = intent.getStringExtra(EXTRA_THEME)?.let { name -> SeasonTheme.entries.firstOrNull { it.name == name } }
             ?: SeasonTheme.current()
+        isAudioMuted = getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            .getBoolean(KEY_AUDIO_MUTED, false)
         root = FrameLayout(this)
         surface = EarthGLSurfaceView(this).apply {
             configure(
@@ -87,6 +91,7 @@ class EarthActivity : AppCompatActivity() {
         setContentView(root)
         model = EarthFeatureModel(coordinator, lifecycleScope, ::render)
         coordinator.earthRevisionListener = { model.refreshForRevision() }
+        coordinator.localWahListener = { model.handleLocalWah() }
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             topBar.setPadding(dp(18), bars.top + dp(12), dp(18), dp(6))
@@ -108,6 +113,8 @@ class EarthActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         coordinator.setEarthPresented(true)
+        coordinator.setEarthAudioMuted(isAudioMuted)
+        model.startAudio()
     }
 
     override fun onPause() {
@@ -116,12 +123,14 @@ class EarthActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        model.stopAudio()
         coordinator.setEarthPresented(false)
         super.onStop()
     }
 
     override fun onDestroy() {
         coordinator.earthRevisionListener = null
+        coordinator.localWahListener = null
         model.close()
         super.onDestroy()
     }
@@ -138,10 +147,16 @@ class EarthActivity : AppCompatActivity() {
             addView(textView(this@EarthActivity, "拖动旋转 · 双指缩放", 11f, 0x94FFFFFF.toInt()))
         }
         autoButton = chromeButton("Ⅱ", "停止地球自转") { toggleAutoRotation() }
+        muteButton = chromeButton(if (isAudioMuted) "🔇" else "🔊", audioButtonDescription()) {
+            toggleAudioMuted()
+        }.apply {
+            ViewCompat.setStateDescription(this, if (isAudioMuted) "已静音" else "声音已开启")
+        }
         optionsButton = chromeButton("⋯", "哇声地球选项") { anchor -> showOptions(anchor) }.apply { visibility = View.GONE }
         topBar.addView(close, LinearLayout.LayoutParams(dp(44), dp(44)))
         topBar.addView(heading, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(8) })
         topBar.addView(autoButton, LinearLayout.LayoutParams(dp(44), dp(44)))
+        topBar.addView(muteButton, LinearLayout.LayoutParams(dp(44), dp(44)))
         topBar.addView(optionsButton, LinearLayout.LayoutParams(dp(44), dp(44)))
         root.addView(topBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP))
 
@@ -193,7 +208,7 @@ class EarthActivity : AppCompatActivity() {
                 row.addView(LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     addView(textView(this@EarthActivity, "摇动竹知了，让这里产生回响", 14f, Color.WHITE, android.graphics.Typeface.BOLD))
-                    addView(textView(this@EarthActivity, "最后一声后的波纹会持续 10 分钟", 11f, 0x94FFFFFF.toInt()))
+                    addView(textView(this@EarthActivity, "最后一声后的波纹和声音会持续 10 分钟", 11f, 0x94FFFFFF.toInt()))
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 panel.addView(row)
             }
@@ -228,6 +243,23 @@ class EarthActivity : AppCompatActivity() {
             ViewCompat.setStateDescription(this, if (autoRotationEnabled) "正在自转" else "已停止")
         }
     }
+
+    private fun toggleAudioMuted() {
+        isAudioMuted = !isAudioMuted
+        getSharedPreferences(PREFERENCES, MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_AUDIO_MUTED, isAudioMuted)
+            .apply()
+        coordinator.setEarthAudioMuted(isAudioMuted)
+        (muteButton as? TextView)?.apply {
+            text = if (isAudioMuted) "🔇" else "🔊"
+            contentDescription = audioButtonDescription()
+            ViewCompat.setStateDescription(this, if (isAudioMuted) "已静音" else "声音已开启")
+        }
+    }
+
+    private fun audioButtonDescription(): String =
+        if (isAudioMuted) "开启哇声地球声音" else "静音哇声地球"
 
     private fun showOptions(anchor: View) {
         PopupMenu(this, anchor).apply {
@@ -338,7 +370,11 @@ class EarthActivity : AppCompatActivity() {
     private fun marginTop(top: Int, width: Int = ViewGroup.LayoutParams.WRAP_CONTENT) =
         LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(top) }
 
-    companion object { const val EXTRA_THEME = "season_theme" }
+    companion object {
+        const val EXTRA_THEME = "season_theme"
+        private const val PREFERENCES = "zhuzhiliao"
+        private const val KEY_AUDIO_MUTED = "zzl_earth_audio_muted"
+    }
 }
 
 private class EarthChromeScrim(context: android.content.Context) : View(context) {

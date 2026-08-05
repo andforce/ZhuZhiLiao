@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import com.azhegezhege.zhuzhiliao.audio.EarthAudioSynchronizer
+import com.azhegezhege.zhuzhiliao.audio.EarthAudioVoicePlanner
 import com.azhegezhege.zhuzhiliao.audio.ToyAudioEngine
 import com.azhegezhege.zhuzhiliao.audio.ToyHapticFeedback
 import com.azhegezhege.zhuzhiliao.math.Vec3
@@ -13,6 +13,7 @@ import com.azhegezhege.zhuzhiliao.motion.ShakeDrive
 import com.azhegezhege.zhuzhiliao.network.CounterService
 import com.azhegezhege.zhuzhiliao.network.CounterStats
 import com.azhegezhege.zhuzhiliao.network.EarthBounds
+import com.azhegezhege.zhuzhiliao.network.EarthNode
 import com.azhegezhege.zhuzhiliao.network.EarthSnapshot
 import com.azhegezhege.zhuzhiliao.network.LeaderboardSnapshot
 import com.azhegezhege.zhuzhiliao.physics.MotionInput
@@ -64,7 +65,6 @@ object ToySceneLayout {
 class ExperienceCoordinator(context: Context) {
     private val motionController = MotionController(context)
     private val audioEngine = ToyAudioEngine(context)
-    private val earthAudioSynchronizer = EarthAudioSynchronizer(audioEngine::update)
     private val counterService = CounterService(context)
     private val hapticFeedback = ToyHapticFeedback(context)
     private val simulation = ToySimulation()
@@ -90,6 +90,7 @@ class ExperienceCoordinator(context: Context) {
     var uiState = ExperienceUiState(); private set
     var stateListener: ((ExperienceUiState) -> Unit)? = null
     var earthRevisionListener: ((Int) -> Unit)? = null
+    var localWahListener: (() -> Unit)? = null
 
     init {
         counterService.stateListener = { handler.post(::publishState) }
@@ -204,7 +205,27 @@ class ExperienceCoordinator(context: Context) {
         counterService.loadEarthSnapshot(detail, bounds)
 
     fun setEarthPresented(isPresented: Boolean) {
-        earthAudioSynchronizer.setEarthPresented(isPresented)
+        audioEngine.setEarthPresented(isPresented)
+    }
+
+    fun setEarthAudioMuted(isMuted: Boolean) {
+        audioEngine.setEarthMuted(isMuted)
+    }
+
+    fun synchronizeEarthAudio(
+        nodes: List<EarthNode>,
+        serverClockOffsetMilliseconds: Long,
+        nowMilliseconds: Long = System.currentTimeMillis(),
+    ): Long? {
+        val serverNow = nowMilliseconds + serverClockOffsetMilliseconds
+        val voices = EarthAudioVoicePlanner.voices(
+            nodes = nodes,
+            serverNow = serverNow,
+            serverClockOffsetMilliseconds = serverClockOffsetMilliseconds,
+            localWahAt = lastLocalWahMillis,
+        )
+        audioEngine.updateEarthVoices(voices)
+        return voices.minOfOrNull { it.activeUntil }?.minus(serverClockOffsetMilliseconds)
     }
 
     private val simulationLoop = object : Runnable {
@@ -260,12 +281,12 @@ class ExperienceCoordinator(context: Context) {
             latestSimulationFrame = frame
             pendingRenderedWahs += frame.completedWahs
         }
-        earthAudioSynchronizer.update(frame.revolutionsPerSecond, frame.state.activity, frame.phase)
         if (!automaticMode) {
             hapticFeedback.update(frame)
             if (frame.completedWahs > 0) {
                 counterService.record(frame.completedWahs)
                 lastLocalWahMillis = System.currentTimeMillis()
+                localWahListener?.invoke()
             }
         }
     }

@@ -29,9 +29,27 @@ class EarthFeatureModel(
         private set
     private var detail = 2
     private var refreshJob: Job? = null
+    private var audioExpiryJob: Job? = null
+    private var isAudioActive = false
 
     fun start() {
         refresh(showLoading = true)
+    }
+
+    fun startAudio() {
+        isAudioActive = true
+        synchronizeAudio()
+    }
+
+    fun stopAudio() {
+        isAudioActive = false
+        audioExpiryJob?.cancel()
+        audioExpiryJob = null
+    }
+
+    fun handleLocalWah() {
+        synchronizeAudio()
+        onChange(state)
     }
 
     fun refreshForRevision() {
@@ -108,6 +126,28 @@ class EarthFeatureModel(
 
     fun close() {
         refreshJob?.cancel()
+        stopAudio()
+    }
+
+    private fun synchronizeAudio() {
+        audioExpiryJob?.cancel()
+        if (!isAudioActive) {
+            audioExpiryJob = null
+            return
+        }
+        val nextExpiry = coordinator.synchronizeEarthAudio(
+            nodes = state.nodes,
+            serverClockOffsetMilliseconds = state.serverClockOffsetMilliseconds,
+        ) ?: run {
+            audioExpiryJob = null
+            return
+        }
+        val waitMilliseconds = (nextExpiry - System.currentTimeMillis() + 20L)
+            .coerceAtLeast(20L)
+        audioExpiryJob = scope.launch {
+            delay(waitMilliseconds)
+            synchronizeAudio()
+        }
     }
 
     private fun refresh(showLoading: Boolean) {
@@ -147,5 +187,6 @@ class EarthFeatureModel(
     private fun update(value: EarthFeatureState) {
         state = value
         onChange(value)
+        if (isAudioActive) synchronizeAudio()
     }
 }
