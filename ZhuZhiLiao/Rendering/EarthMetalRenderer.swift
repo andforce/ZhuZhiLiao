@@ -3,6 +3,64 @@ import QuartzCore
 import simd
 import UIKit
 
+struct EarthCameraAngles: Equatable, Sendable {
+    var yaw: Float
+    var pitch: Float
+}
+
+enum EarthCameraFocus {
+    static let initialAngles = EarthCameraAngles(yaw: -1.35, pitch: 0.18)
+
+    static func preferredNode(
+        in nodes: [EarthNode],
+        from angles: EarthCameraAngles
+    ) -> EarthNode? {
+        if let myNode = nodes.first(where: \.highlightsMe) {
+            return myNode
+        }
+
+        return nodes.max { lhs, rhs in
+            frontDepth(of: lhs, at: angles) < frontDepth(of: rhs, at: angles)
+        }
+    }
+
+    static func centeredAngles(for node: EarthNode) -> EarthCameraAngles {
+        let point = EarthBoundaryLoader.spherePoint(
+            latitude: node.latitude,
+            longitude: node.longitude
+        )
+
+        var pitch = atan2(point.y, point.z)
+        if pitch > .pi / 2 {
+            pitch -= .pi
+        } else if pitch < -.pi / 2 {
+            pitch += .pi
+        }
+
+        let pitchedPoint = simd_float4x4.rotation(
+            angle: pitch,
+            axis: SIMD3<Float>(1, 0, 0)
+        ) * SIMD4<Float>(point, 1)
+        let yaw = atan2(-pitchedPoint.x, pitchedPoint.z)
+        return EarthCameraAngles(yaw: yaw, pitch: pitch)
+    }
+
+    static func frontDepth(of node: EarthNode, at angles: EarthCameraAngles) -> Float {
+        let point = EarthBoundaryLoader.spherePoint(
+            latitude: node.latitude,
+            longitude: node.longitude
+        )
+        let globe = simd_float4x4.rotation(
+            angle: angles.yaw,
+            axis: SIMD3<Float>(0, 1, 0)
+        ) * simd_float4x4.rotation(
+            angle: angles.pitch,
+            axis: SIMD3<Float>(1, 0, 0)
+        )
+        return (globe * SIMD4<Float>(point, 1)).z
+    }
+}
+
 private struct EarthDrawUniforms {
     var viewProjectionMatrix: simd_float4x4
     var modelMatrix: simd_float4x4
@@ -35,15 +93,23 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
     private var serverClockOffsetMilliseconds: Int64 = 0
     private var localWahAt: Date?
     private var reduceMotion = false
-    private var yaw: Float = -1.35
-    private var pitch: Float = 0.18
+    private var yaw = EarthCameraFocus.initialAngles.yaw
+    private var pitch = EarthCameraFocus.initialAngles.pitch
     private var cameraDistance: Float = 3.25
     private var lastFrameTime = CACurrentMediaTime()
     private var lastInteractionTime = CACurrentMediaTime()
     private var lastReportedDetail = -1
     private var viewportSize = SIMD2<Float>(1, 1)
+    private var hasAppliedInitialFocus = false
+    private var focusAnimation: FocusAnimation?
     private var onDetailChange: (Int) -> Void
     private var onSelect: (EarthNode?) -> Void
+
+    private struct FocusAnimation {
+        let start: EarthCameraAngles
+        let target: EarthCameraAngles
+        let startTime: CFTimeInterval
+    }
 
     init(
         onDetailChange: @escaping (Int) -> Void,
@@ -150,6 +216,7 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
         self.reduceMotion = reduceMotion
         self.onDetailChange = onDetailChange
         self.onSelect = onSelect
+        applyInitialFocusIfNeeded(to: nodes)
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -166,7 +233,8 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
         let now = CACurrentMediaTime()
         let delta = min(max(now - lastFrameTime, 0), 0.05)
         lastFrameTime = now
-        if !reduceMotion, now - lastInteractionTime > 3 {
+        updateFocusAnimation(at: now)
+        if focusAnimation == nil, !reduceMotion, now - lastInteractionTime > 3 {
             yaw += Float(delta) * 0.055
         }
 
@@ -214,15 +282,20 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         guard let view = gesture.view else { return }
+        focusAnimation = nil
         let translation = gesture.translation(in: view)
         gesture.setTranslation(.zero, in: view)
         yaw += Float(translation.x) * 0.006
-        pitch = min(max(pitch + Float(translation.y) * 0.005, -1.25), 1.25)
+        pitch = min(
+            max(pitch + Float(translation.y) * 0.005, -.pi / 2),
+            .pi / 2
+        )
         lastInteractionTime = CACurrentMediaTime()
     }
 
     @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
         guard gesture.scale.isFinite, gesture.scale > 0 else { return }
+        focusAnimation = nil
         cameraDistance = min(max(cameraDistance / Float(gesture.scale), 1.72), 4.25)
         gesture.scale = 1
         lastInteractionTime = CACurrentMediaTime()
@@ -255,6 +328,57 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
             }
         }
         onSelect(best?.node)
+    }
+
+    private func applyInitialFocusIfNeeded(to nodes: [EarthNode]) {
+        guard !hasAppliedInitialFocus,
+              let node = EarthCameraFocus.preferredNode(
+                in: nodes,
+                from: EarthCameraAngles(yaw: yaw, pitch: pitch)
+              ) else {
+            return
+        }
+
+        hasAppliedInitialFocus = true
+        let target = EarthCameraFocus.centeredAngles(for: node)
+        lastInteractionTime = CACurrentMediaTime()
+        if reduceMotion {
+            yaw = target.yaw
+            pitch = target.pitch
+        } else {
+            focusAnimation = FocusAnimation(
+                start: EarthCameraAngles(yaw: yaw, pitch: pitch),
+                target: target,
+                startTime: lastInteractionTime
+            )
+        }
+    }
+
+    private func updateFocusAnimation(at now: CFTimeInterval) {
+        guard let animation = focusAnimation else { return }
+        if reduceMotion {
+            yaw = animation.target.yaw
+            pitch = animation.target.pitch
+            focusAnimation = nil
+            return
+        }
+
+        let progress = min(max(Float((now - animation.startTime) / 0.65), 0), 1)
+        let easedProgress = 1 - pow(1 - progress, 3)
+        let yawDelta = atan2(
+            sin(animation.target.yaw - animation.start.yaw),
+            cos(animation.target.yaw - animation.start.yaw)
+        )
+        yaw = animation.start.yaw + yawDelta * easedProgress
+        pitch = animation.start.pitch
+            + (animation.target.pitch - animation.start.pitch) * easedProgress
+
+        if progress >= 1 {
+            yaw = animation.target.yaw
+            pitch = animation.target.pitch
+            focusAnimation = nil
+            lastInteractionTime = now
+        }
     }
 
     private func drawNodes(

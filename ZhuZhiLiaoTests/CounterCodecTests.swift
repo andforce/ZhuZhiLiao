@@ -1,4 +1,5 @@
 import XCTest
+import simd
 @testable import ZhuZhiLiao
 
 final class CounterCodecTests: XCTestCase {
@@ -122,5 +123,86 @@ final class CounterCodecTests: XCTestCase {
         XCTAssertTrue(first.hasPrefix("v1:"))
         XCTAssertFalse(first.contains("31.2304"))
         XCTAssertNil(EarthLocationGrid.cellID(latitude: 91, longitude: 0))
+    }
+
+    func testEarthFocusPrioritizesMyCoordinate() {
+        let nearby = earthNode(id: "nearby", latitude: 0, longitude: -15)
+        let mine = earthNode(
+            id: "mine",
+            latitude: 31,
+            longitude: 121,
+            kind: .cluster,
+            containsMe: true
+        )
+
+        let preferred = EarthCameraFocus.preferredNode(
+            in: [nearby, mine],
+            from: EarthCameraFocus.initialAngles
+        )
+
+        XCTAssertEqual(preferred?.id, "mine")
+    }
+
+    func testEarthFocusFallsBackToCoordinateNearestScreenCenter() {
+        let centered = earthNode(id: "centered", latitude: 2, longitude: 168)
+        let farAway = earthNode(id: "far-away", latitude: 30, longitude: 120)
+
+        let preferred = EarthCameraFocus.preferredNode(
+            in: [farAway, centered],
+            from: EarthCameraFocus.initialAngles
+        )
+
+        XCTAssertEqual(preferred?.id, "centered")
+    }
+
+    func testEarthFocusCenteredAnglesPutCoordinateAtFrontCenter() {
+        for coordinate in [(31.23, 121.47), (-33.87, 151.21), (64.15, -21.94)] {
+            let target = earthNode(
+                id: "target",
+                latitude: coordinate.0,
+                longitude: coordinate.1
+            )
+            let angles = EarthCameraFocus.centeredAngles(for: target)
+            let point = EarthBoundaryLoader.spherePoint(
+                latitude: target.latitude,
+                longitude: target.longitude
+            )
+            let globe = simd_float4x4.rotation(
+                angle: angles.yaw,
+                axis: SIMD3<Float>(0, 1, 0)
+            ) * simd_float4x4.rotation(
+                angle: angles.pitch,
+                axis: SIMD3<Float>(1, 0, 0)
+            )
+            let centeredPoint = globe * SIMD4<Float>(point, 1)
+
+            XCTAssertEqual(centeredPoint.x, 0, accuracy: 0.000_1)
+            XCTAssertEqual(centeredPoint.y, 0, accuracy: 0.000_1)
+            XCTAssertGreaterThan(centeredPoint.z, 0.999)
+        }
+    }
+
+    private func earthNode(
+        id: String,
+        latitude: Double,
+        longitude: Double,
+        kind: EarthNode.Kind = .player,
+        isMe: Bool = false,
+        containsMe: Bool = false
+    ) -> EarthNode {
+        EarthNode(
+            kind: kind,
+            id: id,
+            code: id,
+            score: 1,
+            latitude: latitude,
+            longitude: longitude,
+            userCount: nil,
+            totalWahs: nil,
+            activeCount: nil,
+            activeUntil: nil,
+            isMe: isMe,
+            containsMe: containsMe
+        )
     }
 }
