@@ -160,11 +160,7 @@ final class ExperienceCoordinator: ObservableObject {
         pendingRenderedWahs = 0
 
         if !isRunningUnitTests {
-            audioEngine.update(
-                revolutionsPerSecond: frame.revolutionsPerSecond,
-                activity: frame.state.activity,
-                phase: frame.phase
-            )
+            updateAudio(for: frame)
         }
 
         if timestamp - lastHUDPresentationTime >= 0.12 {
@@ -294,11 +290,7 @@ final class ExperienceCoordinator: ObservableObject {
         elapsedTime += Float(clampedDeltaTime)
         pendingRenderedWahs += frame.completedWahs
         if earthIsPresented, !isRunningUnitTests {
-            audioEngine.update(
-                revolutionsPerSecond: frame.revolutionsPerSecond,
-                activity: frame.state.activity,
-                phase: frame.phase
-            )
+            updateAudio(for: frame)
         }
 
         if !automaticMode {
@@ -329,6 +321,14 @@ final class ExperienceCoordinator: ObservableObject {
             return .shaking
         }
         return .idle
+    }
+
+    private func updateAudio(for frame: SimulationFrame) {
+        audioEngine.update(
+            revolutionsPerSecond: frame.revolutionsPerSecond,
+            activity: frame.state.activity,
+            phase: frame.phase
+        )
     }
 
     private func resetSimulation(gravityDirection: SIMD3<Float>) {
