@@ -1,6 +1,6 @@
 # 赛博竹知了
 
-把传统民间童玩“竹知了”装进 iPhone。轻轻往复摇动手机或用手指在屏幕上画圈，竹知了会随动作旋转，并根据转速发出不同节奏和响度的叫声。
+把传统民间童玩“竹知了”装进 iPhone 与 Android 手机。轻轻往复摇动手机或用手指在屏幕上画圈，竹知了会随动作旋转，并根据转速发出不同节奏和响度的叫声。
 
 <p align="center">
   <img src="screenshots/raw/zh-Hans/iphone69/02-自动演示.png" alt="自动演示" width="30%">
@@ -10,8 +10,8 @@
 
 ## 特性
 
-- 基于 SwiftUI 和 Metal 的全原生 iOS 体验
-- Core Motion 三轴动作识别与固定步长绳系物理模拟
+- SwiftUI + Metal 的原生 iOS 客户端，以及 Kotlin + 传统 View + OpenGL ES 的原生 Android 客户端
+- Core Motion / Android Sensors 三轴动作识别与固定步长绳系物理模拟
 - 体感、全屏触控和自动演示三种玩法
 - 根据转速动态调整速度、音高和音量的真实录音
 - 春、夏、秋、冬四套季节画面
@@ -22,9 +22,10 @@
 
 ## 技术栈
 
-- 客户端：Swift 6、SwiftUI、Metal / MetalKit、Core Motion、AVFoundation
+- iOS 客户端：Swift 6、SwiftUI、Metal / MetalKit、Core Motion、AVFoundation
+- Android 客户端：Kotlin、传统 View、OpenGL ES 3.0、Android Sensors、SoundPool
 - 服务端：Node.js、WebSocket、SQLite
-- 平台：iPhone，iOS 17.0+，竖屏
+- 平台：iPhone（iOS 17.0+）与 Android 手机（Android 10+），竖屏
 
 ## 从源码运行
 
@@ -41,6 +42,17 @@
 ```bash
 xcodegen generate
 ```
+
+### Android 客户端
+
+使用 Android Studio 打开 `android/`，选择 Android 10（API 29）或更高版本的手机运行。命令行构建：
+
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+Debug APK 输出到 `android/app/build/outputs/apk/debug/app-debug.apk`。没有可用动作传感器时会自动演示，也可按住屏幕滑动控制；“哇声地球”仅在用户主动加入时申请粗略位置权限。
 
 ### 计数服务
 
@@ -72,11 +84,19 @@ cd server
 npm test
 ```
 
+Android 单元测试：
+
+```bash
+cd android
+./gradlew testDebugUnitTest
+```
+
 ## 项目结构
 
 ```text
 ZhuZhiLiao/          iOS 应用源码与资源
 ZhuZhiLiaoTests/     物理、动作滤波、计圈与网络编解码测试
+android/             Android 应用源码、资源与单元测试
 server/              全球计数与在线统计服务
 metadata/            App Store 元数据
 screenshots/         App Store 截图与审核记录
