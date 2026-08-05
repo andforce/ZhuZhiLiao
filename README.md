@@ -8,6 +8,11 @@
   <img src="screenshots/raw/zh-Hans/iphone69/01-安全提示.png" alt="安全提示" width="30%">
 </p>
 
+<p align="center">
+  <img src="screenshots/readme/04-全球排行榜.png" alt="全球排行榜" width="30%">
+  <img src="screenshots/readme/05-哇声地球.png" alt="哇声地球" width="30%">
+</p>
+
 ## 特性
 
 - 基于 SwiftUI 和 Metal 的全原生 iOS 体验
