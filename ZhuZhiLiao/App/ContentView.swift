@@ -122,21 +122,58 @@ private struct SeasonalScene: View {
             )
             .opacity(isRunningUnitTests ? 0 : 1)
             .contentShape(Rectangle())
-            .gesture(pointerGesture(in: proxy.size))
+            .gesture(pointerGesture(
+                in: proxy.size,
+                bottomSafeAreaInset: proxy.safeAreaInsets.bottom
+            ))
         }
         .background(theme.colors.skyTop)
         .ignoresSafeArea()
         .allowsHitTesting(!isRunningUnitTests)
     }
 
-    private func pointerGesture(in size: CGSize) -> some Gesture {
+    private func pointerGesture(
+        in size: CGSize,
+        bottomSafeAreaInset: CGFloat
+    ) -> some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
             .onChanged { value in
+                guard PointerInteractionRegion.accepts(
+                    startLocation: value.startLocation,
+                    viewport: size,
+                    bottomSafeAreaInset: bottomSafeAreaInset
+                ) else { return }
                 coordinator.movePointer(to: value.location, in: size)
             }
-            .onEnded { _ in
+            .onEnded { value in
+                guard PointerInteractionRegion.accepts(
+                    startLocation: value.startLocation,
+                    viewport: size,
+                    bottomSafeAreaInset: bottomSafeAreaInset
+                ) else { return }
                 coordinator.endPointerInteraction()
             }
+    }
+}
+
+enum PointerInteractionRegion {
+    static func accepts(
+        startLocation: CGPoint,
+        viewport: CGSize,
+        bottomSafeAreaInset: CGFloat
+    ) -> Bool {
+        guard viewport.width > 0,
+              viewport.height > 0,
+              startLocation.x.isFinite,
+              startLocation.y.isFinite else {
+            return false
+        }
+
+        let safeAreaInset = min(max(bottomSafeAreaInset, 0), viewport.height)
+        return startLocation.x >= 0
+            && startLocation.x <= viewport.width
+            && startLocation.y >= 0
+            && startLocation.y < viewport.height - safeAreaInset
     }
 }
 

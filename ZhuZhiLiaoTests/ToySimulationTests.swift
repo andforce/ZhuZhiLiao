@@ -81,6 +81,34 @@ final class ToySimulationTests: XCTestCase {
         XCTAssertEqual(sixtyFPS.state.position.y, oneTwentyFPS.state.position.y, accuracy: 0.002)
     }
 
+    func testPointerInteractionRejectsGestureStartedInBottomSafeArea() {
+        let viewport = CGSize(width: 393, height: 852)
+
+        XCTAssertTrue(PointerInteractionRegion.accepts(
+            startLocation: CGPoint(x: 196, y: 817.9),
+            viewport: viewport,
+            bottomSafeAreaInset: 34
+        ))
+        XCTAssertFalse(PointerInteractionRegion.accepts(
+            startLocation: CGPoint(x: 196, y: 818),
+            viewport: viewport,
+            bottomSafeAreaInset: 34
+        ))
+        XCTAssertFalse(PointerInteractionRegion.accepts(
+            startLocation: CGPoint(x: 196, y: 840),
+            viewport: viewport,
+            bottomSafeAreaInset: 34
+        ))
+    }
+
+    func testPointerInteractionUsesWholeViewportWithoutBottomSafeArea() {
+        XCTAssertTrue(PointerInteractionRegion.accepts(
+            startLocation: CGPoint(x: 196, y: 851.9),
+            viewport: CGSize(width: 393, height: 852),
+            bottomSafeAreaInset: 0
+        ))
+    }
+
     func testWebRopeShapeMatchesReferenceSagAndEndpoints() {
         let anchor = SIMD3<Float>(0, 0, 0)
         let bob = SIMD3<Float>(0, -1, 0)
