@@ -12,7 +12,7 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
-.asc/artifacts/
+iOS/.asc/artifacts/
 
 ## macOS
 .DS_Store

@@ -29,13 +29,14 @@
 
 ## 提交前仍需完成
 
-1. 将 `submission/privacy-policy-zh-Hans.md` 发布到公开 HTTPS 页面，并把 URL 填入简体中文 App 信息。
-2. 按 `submission/app-privacy-answers-zh-Hans.md` 在 App Store Connect 发布 App 隐私回答。
+1. 将 `iOS/submission/privacy-policy-zh-Hans.md` 发布到公开 HTTPS 页面，并把 URL 填入简体中文 App 信息。
+2. 按 `iOS/submission/app-privacy-answers-zh-Hans.md` 在 App Store Connect 发布 App 隐私回答。
 3. 在目标销售地区完成 Natural Earth 默认边界口径的地图合规审查。
 
 完成以上项目后，再运行：
 
 ```sh
+cd iOS
 asc validate --app 6797417293 --version-id 8a455faa-093b-4bda-b546-654571882473 --strict
 ```
 
