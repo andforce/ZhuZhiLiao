@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 data class EarthFeatureState(
     val isLoading: Boolean = true,
     val error: String? = null,
+    val joinError: String? = null,
     val nodes: List<EarthNode> = emptyList(),
     val serverClockOffsetMilliseconds: Long = 0L,
     val selectedNode: EarthNode? = null,
@@ -51,7 +52,7 @@ class EarthFeatureModel(
     fun join(locationService: EarthLocationService, after: (Boolean) -> Unit = {}) {
         if (state.isUpdatingLocation) return
         scope.launch {
-            update(state.copy(isUpdatingLocation = true, error = null))
+            update(state.copy(isUpdatingLocation = true, joinError = null))
             val succeeded = try {
                 val location = locationService.requestOneLocation()
                 val cellID = EarthLocationGrid.cellID(location.latitude, location.longitude)
@@ -59,13 +60,13 @@ class EarthFeatureModel(
                 if (coordinator.uiState.earthCellID != cellID || !state.isParticipating) {
                     coordinator.setEarthLocation(cellID)
                 }
-                update(state.copy(isParticipating = true))
+                update(state.copy(isParticipating = true, joinError = null))
                 refresh(showLoading = false)
                 true
             } catch (_: CancellationException) {
                 false
             } catch (error: Throwable) {
-                update(state.copy(error = error.localizedMessage ?: "当前位置更新失败"))
+                update(state.copy(joinError = error.localizedMessage ?: "当前位置更新失败"))
                 false
             } finally {
                 update(state.copy(isUpdatingLocation = false))

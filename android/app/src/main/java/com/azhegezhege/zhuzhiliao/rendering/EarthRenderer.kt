@@ -4,10 +4,12 @@ import android.content.Context
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import com.azhegezhege.zhuzhiliao.earth.EarthActivityWindow
 import com.azhegezhege.zhuzhiliao.earth.EarthBoundaryLoader
 import com.azhegezhege.zhuzhiliao.earth.EarthCameraAngles
 import com.azhegezhege.zhuzhiliao.earth.EarthCameraFocus
 import com.azhegezhege.zhuzhiliao.earth.EarthGeometry
+import com.azhegezhege.zhuzhiliao.earth.EarthFocusTracker
 import com.azhegezhege.zhuzhiliao.math.Vec3
 import com.azhegezhege.zhuzhiliao.math.Vec4
 import com.azhegezhege.zhuzhiliao.network.EarthNode
@@ -50,7 +52,7 @@ class EarthRenderer(
     private var lastFrameNanos = System.nanoTime()
     private var lastInteractionNanos = System.nanoTime()
     private var lastReportedDetail = -1
-    private var appliedInitialFocus = false
+    private val focusTracker = EarthFocusTracker()
     private var focusAnimation: FocusAnimation? = null
     private var latestViewProjection = GlMatrix.identity()
     private var latestGlobe = GlMatrix.identity()
@@ -159,9 +161,7 @@ class EarthRenderer(
     }
 
     private fun applyInitialFocusIfNeeded() {
-        if (appliedInitialFocus) return
-        val targetNode = EarthCameraFocus.preferredNode(nodes, EarthCameraAngles(yaw, pitch)) ?: return
-        appliedInitialFocus = true
+        val targetNode = focusTracker.nextTarget(nodes, EarthCameraAngles(yaw, pitch)) ?: return
         val target = EarthCameraFocus.centeredAngles(targetNode)
         lastInteractionNanos = System.nanoTime()
         if (reduceMotion) {
@@ -205,7 +205,7 @@ class EarthRenderer(
 
     private fun drawNodes(items: List<EarthNode>) {
         val serverNow = System.currentTimeMillis() + serverClockOffsetMilliseconds
-        val localActiveUntil = localWahAt?.plus(120_000L)
+        val localActiveUntil = localWahAt?.let(EarthActivityWindow::activeUntil)
         items.forEach { node ->
             val normal = EarthGeometry.spherePoint(node.latitude, node.longitude)
             val position = normal * 1.035f

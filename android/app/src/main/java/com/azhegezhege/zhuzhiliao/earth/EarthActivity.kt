@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -50,6 +51,8 @@ class EarthActivity : AppCompatActivity() {
     private var autoRotationEnabled = true
     private var pendingLocationRequest = false
     private var joinDialog: BottomSheetDialog? = null
+    private var joinActionButton: MaterialButton? = null
+    private var joinStatusView: TextView? = null
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (pendingLocationRequest) {
@@ -102,9 +105,19 @@ class EarthActivity : AppCompatActivity() {
         surface.onResume()
     }
 
+    override fun onStart() {
+        super.onStart()
+        coordinator.setEarthPresented(true)
+    }
+
     override fun onPause() {
         surface.onPause()
         super.onPause()
+    }
+
+    override fun onStop() {
+        coordinator.setEarthPresented(false)
+        super.onStop()
     }
 
     override fun onDestroy() {
@@ -147,6 +160,7 @@ class EarthActivity : AppCompatActivity() {
             autoRotationEnabled = autoRotationEnabled,
         )
         optionsButton.visibility = if (state.isParticipating) View.VISIBLE else View.GONE
+        renderJoinSheet(state)
         bottomContainer.removeAllViews()
         bottomContainer.addView(buildBottomPanel(state), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
@@ -170,7 +184,7 @@ class EarthActivity : AppCompatActivity() {
             }
             !state.isParticipating -> {
                 panel.addView(textView(this, "在地球上点亮我", 17f, Color.WHITE, android.graphics.Typeface.BOLD))
-                panel.addView(textView(this, "加入后只上传约 20 公里格网。你的每次哇声会从圆点扩散两分钟。", 12f, 0x9EFFFFFF.toInt()), marginTop(8))
+                panel.addView(textView(this, "加入后只上传约 20 公里格网。你的每次哇声会从圆点扩散 10 分钟。", 12f, 0x9EFFFFFF.toInt()), marginTop(8))
                 panel.addView(accentButton("◎  加入哇声地球") { showJoinSheet() }, marginTop(12, ViewGroup.LayoutParams.MATCH_PARENT))
             }
             else -> {
@@ -179,7 +193,7 @@ class EarthActivity : AppCompatActivity() {
                 row.addView(LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     addView(textView(this@EarthActivity, "摇动竹知了，让这里产生回响", 14f, Color.WHITE, android.graphics.Typeface.BOLD))
-                    addView(textView(this@EarthActivity, "最后一声后的波纹会持续 2 分钟", 11f, 0x94FFFFFF.toInt()))
+                    addView(textView(this@EarthActivity, "最后一声后的波纹会持续 10 分钟", 11f, 0x94FFFFFF.toInt()))
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 panel.addView(row)
             }
@@ -243,14 +257,29 @@ class EarthActivity : AppCompatActivity() {
             addView(textView(this@EarthActivity, "▦  坐标会先在 Android 手机上量化成约 20 公里格网", 14f, Color.WHITE), marginTop(22))
             addView(textView(this@EarthActivity, "▣  服务器不会收到或保存原始精确坐标", 14f, Color.WHITE), marginTop(14))
             addView(textView(this@EarthActivity, "♲  退出地球即可删除格网位置", 14f, Color.WHITE), marginTop(14))
-            addView(accentButton("继续并允许使用期间定位") { requestLocationAndJoin() }, marginTop(28, ViewGroup.LayoutParams.MATCH_PARENT))
+            val status = textView(this@EarthActivity, "", 12f, theme.colors.highlight).apply {
+                gravity = Gravity.CENTER
+                visibility = View.GONE
+            }
+            joinStatusView = status
+            addView(status, marginTop(18, ViewGroup.LayoutParams.MATCH_PARENT))
+            val action = accentButton("继续并允许使用期间定位") { requestLocationAndJoin() }
+            joinActionButton = action
+            addView(action, marginTop(10, ViewGroup.LayoutParams.MATCH_PARENT))
             addView(textView(this@EarthActivity, "取消", 14f, Color.WHITE, android.graphics.Typeface.BOLD).apply {
                 gravity = Gravity.CENTER; setPaddingDp(8, 14); isClickable = true; setOnClickListener { dialog.dismiss() }
             }, marginTop(6, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         dialog.setContentView(content)
-        dialog.setOnDismissListener { if (joinDialog === dialog) joinDialog = null }
+        dialog.setOnDismissListener {
+            if (joinDialog === dialog) {
+                joinDialog = null
+                joinActionButton = null
+                joinStatusView = null
+            }
+        }
         dialog.show()
+        renderJoinSheet(model.state)
     }
 
     private fun requestLocationAndJoin() {
@@ -263,8 +292,21 @@ class EarthActivity : AppCompatActivity() {
     }
 
     private fun performJoin() {
-        joinDialog?.dismiss()
-        model.join(locationService)
+        model.join(locationService) { succeeded ->
+            if (succeeded) joinDialog?.dismiss()
+        }
+    }
+
+    private fun renderJoinSheet(state: EarthFeatureState) {
+        val presentation = EarthJoinPresentation.from(state)
+        joinActionButton?.apply {
+            text = presentation.buttonLabel
+            isEnabled = presentation.buttonEnabled
+        }
+        joinStatusView?.apply {
+            text = presentation.statusMessage.orEmpty()
+            visibility = if (presentation.statusMessage == null) View.GONE else View.VISIBLE
+        }
     }
 
     private fun confirmLeave() {

@@ -171,7 +171,7 @@ struct WahEarthView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("在地球上点亮我")
                     .font(.headline)
-                Text("加入后只上传约 20 公里格网。你的每次哇声会从圆点扩散两分钟。")
+                Text("加入后只上传约 20 公里格网。你的每次哇声会从圆点扩散 10 分钟。")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.62))
                 Button {
@@ -193,7 +193,7 @@ struct WahEarthView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("摇动竹知了，让这里产生回响")
                         .font(.subheadline.weight(.semibold))
-                    Text("最后一声后的波纹会持续 2 分钟")
+                    Text("最后一声后的波纹会持续 10 分钟")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.58))
                 }

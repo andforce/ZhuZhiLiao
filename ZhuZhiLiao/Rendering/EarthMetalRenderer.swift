@@ -394,7 +394,7 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
     ) {
         let localNow = Int64(Date().timeIntervalSince1970 * 1_000)
         let serverNow = localNow + serverClockOffsetMilliseconds
-        let localActiveUntil = localWahAt.map { Int64($0.timeIntervalSince1970 * 1_000) + 120_000 }
+        let localActiveUntil = localWahAt.map { Int64($0.timeIntervalSince1970 * 1_000) + 600_000 }
         for node in nodes {
             let normal = EarthBoundaryLoader.spherePoint(
                 latitude: node.latitude,

@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import com.azhegezhege.zhuzhiliao.audio.EarthAudioSynchronizer
 import com.azhegezhege.zhuzhiliao.audio.ToyAudioEngine
 import com.azhegezhege.zhuzhiliao.audio.ToyHapticFeedback
 import com.azhegezhege.zhuzhiliao.math.Vec3
@@ -63,6 +64,7 @@ object ToySceneLayout {
 class ExperienceCoordinator(context: Context) {
     private val motionController = MotionController(context)
     private val audioEngine = ToyAudioEngine(context)
+    private val earthAudioSynchronizer = EarthAudioSynchronizer(audioEngine::update)
     private val counterService = CounterService(context)
     private val hapticFeedback = ToyHapticFeedback(context)
     private val simulation = ToySimulation()
@@ -201,6 +203,10 @@ class ExperienceCoordinator(context: Context) {
     suspend fun loadEarthSnapshot(detail: Int, bounds: List<EarthBounds> = emptyList()): EarthSnapshot =
         counterService.loadEarthSnapshot(detail, bounds)
 
+    fun setEarthPresented(isPresented: Boolean) {
+        earthAudioSynchronizer.setEarthPresented(isPresented)
+    }
+
     private val simulationLoop = object : Runnable {
         override fun run() {
             if (!isRunning) return
@@ -254,6 +260,7 @@ class ExperienceCoordinator(context: Context) {
             latestSimulationFrame = frame
             pendingRenderedWahs += frame.completedWahs
         }
+        earthAudioSynchronizer.update(frame.revolutionsPerSecond, frame.state.activity, frame.phase)
         if (!automaticMode) {
             hapticFeedback.update(frame)
             if (frame.completedWahs > 0) {

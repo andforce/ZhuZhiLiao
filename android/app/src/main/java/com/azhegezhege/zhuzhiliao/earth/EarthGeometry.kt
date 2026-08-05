@@ -59,3 +59,20 @@ object EarthCameraFocus {
     fun frontDepth(node: EarthNode, angles: EarthCameraAngles): Float =
         EarthGeometry.rotated(EarthGeometry.spherePoint(node.latitude, node.longitude), angles).z
 }
+
+class EarthFocusTracker {
+    private var appliedInitialFocus = false
+    private var focusedMyLocation = false
+
+    fun nextTarget(nodes: List<EarthNode>, angles: EarthCameraAngles): EarthNode? {
+        val myLocation = nodes.firstOrNull(EarthNode::highlightsMe)
+        if (myLocation != null && !focusedMyLocation) {
+            focusedMyLocation = true
+            appliedInitialFocus = true
+            return myLocation
+        }
+        if (nodes.isNotEmpty() && myLocation == null) focusedMyLocation = false
+        if (appliedInitialFocus) return null
+        return EarthCameraFocus.preferredNode(nodes, angles)?.also { appliedInitialFocus = true }
+    }
+}

@@ -29,6 +29,16 @@ class EarthCameraFocusTest {
         assertEquals(1f, EarthGeometry.spherePoint(0.0, 90.0).z, 0.0001f)
     }
 
+    @Test
+    fun `joining later refocuses the globe on my location`() {
+        val tracker = EarthFocusTracker()
+        val ordinary = node("front", latitude = 0.0, longitude = 180.0)
+        val mine = node("mine", latitude = 31.2, longitude = 121.5, isMe = true)
+
+        assertEquals(ordinary, tracker.nextTarget(listOf(ordinary), EarthCameraFocus.INITIAL))
+        assertEquals(mine, tracker.nextTarget(listOf(ordinary, mine), EarthCameraFocus.INITIAL))
+    }
+
     private fun node(id: String, latitude: Double, longitude: Double, isMe: Boolean = false) = EarthNode(
         kind = EarthNode.Kind.PLAYER,
         id = id,
