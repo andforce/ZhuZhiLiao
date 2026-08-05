@@ -95,14 +95,18 @@ struct LeaderboardView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .refreshable { await load() }
+        .refreshable { await load(showLoadingIndicator: false) }
     }
 
-    private func load() async {
-        state = .loading
+    private func load(showLoadingIndicator: Bool = true) async {
+        if showLoadingIndicator {
+            state = .loading
+        }
         do {
             state = .loaded(try await coordinator.loadLeaderboard())
         } catch is CancellationError {
+            return
+        } catch let error as URLError where error.code == .cancelled {
             return
         } catch {
             state = .failed(error.localizedDescription)

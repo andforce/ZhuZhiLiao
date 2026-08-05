@@ -233,8 +233,7 @@ private struct InstructionPanel: View {
                     .foregroundStyle(.white.opacity(0.60))
                     .lineLimit(2)
             }
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 15)
         .frame(minHeight: 66)
