@@ -1,5 +1,9 @@
 import Foundation
 
+enum EarthActivity {
+    static let durationMilliseconds: Int64 = 600_000
+}
+
 struct CounterStats: Codable, Equatable, Sendable {
     let online: Int
     let wahs: Int

@@ -96,6 +96,105 @@ final class CounterCodecTests: XCTestCase {
         XCTAssertTrue(snapshot.nodes[1].isActive(serverNow: 1_000_000))
     }
 
+    func testEarthAudioCreatesOneVoicePerPlayerAndActiveClusterMember() {
+        let nodes = [
+            audioEarthNode(
+                id: "player",
+                kind: .player,
+                activeUntil: 1_120_000
+            ),
+            audioEarthNode(
+                id: "cluster",
+                kind: .cluster,
+                activeCount: 3,
+                activeUntil: 1_110_000
+            )
+        ]
+
+        let voices = EarthAudioVoicePlanner.voices(
+            nodes: nodes,
+            serverNow: 1_000_000,
+            serverClockOffsetMilliseconds: 0,
+            localWahAt: nil
+        )
+
+        XCTAssertEqual(voices.count, 4)
+        XCTAssertEqual(Set(voices.map(\.id)).count, 4)
+        XCTAssertEqual(voices.filter { $0.id.hasPrefix("cluster:") }.count, 3)
+    }
+
+    func testEarthAudioOmitsExpiredNodesAndUsesServerClock() {
+        let nodes = [
+            audioEarthNode(id: "expired", kind: .player, activeUntil: 999_999),
+            audioEarthNode(id: "active", kind: .player, activeUntil: 1_000_001)
+        ]
+
+        let voices = EarthAudioVoicePlanner.voices(
+            nodes: nodes,
+            serverNow: 1_000_000,
+            serverClockOffsetMilliseconds: 12_000,
+            localWahAt: nil
+        )
+
+        XCTAssertEqual(voices.map(\.id), ["player:active:0"])
+        XCTAssertEqual(voices.first?.activeUntil, 1_000_001)
+    }
+
+    func testEarthAudioUsesLocalWahToActivateMyStaleCluster() {
+        let localWahAt = Date(timeIntervalSince1970: 1_000)
+        let mine = audioEarthNode(
+            id: "mine",
+            kind: .cluster,
+            activeCount: 0,
+            activeUntil: nil,
+            containsMe: true
+        )
+
+        let voices = EarthAudioVoicePlanner.voices(
+            nodes: [mine],
+            serverNow: 1_050_500,
+            serverClockOffsetMilliseconds: 500,
+            localWahAt: localWahAt
+        )
+
+        XCTAssertEqual(voices.count, 1)
+        XCTAssertEqual(voices.first?.activeUntil, 1_600_500)
+    }
+
+    func testEarthAudioIdentityPhaseAndGainAreStable() throws {
+        let node = audioEarthNode(
+            id: "stable",
+            kind: .cluster,
+            activeCount: 2,
+            activeUntil: 1_120_000
+        )
+        let first = EarthAudioVoicePlanner.voices(
+            nodes: [node],
+            serverNow: 1_000_000,
+            serverClockOffsetMilliseconds: 0,
+            localWahAt: nil
+        )
+        let second = EarthAudioVoicePlanner.voices(
+            nodes: [node],
+            serverNow: 1_000_100,
+            serverClockOffsetMilliseconds: 0,
+            localWahAt: nil
+        )
+
+        XCTAssertEqual(first, second)
+        XCTAssertNotEqual(first[0].normalizedStartPhase, first[1].normalizedStartPhase)
+        XCTAssertEqual(EarthAudioVoicePlanner.normalizedGain(voiceCount: 0), 0)
+        XCTAssertEqual(
+            EarthAudioVoicePlanner.normalizedGain(voiceCount: 4, isMuted: true),
+            0
+        )
+        XCTAssertEqual(
+            EarthAudioVoicePlanner.normalizedGain(voiceCount: 4),
+            0.4,
+            accuracy: 0.000_1
+        )
+    }
+
     func testEarthViewClampsDetailAndEncodesBounds() throws {
         let text = try CounterCodec.earthView(
             requestID: "view",
@@ -201,6 +300,30 @@ final class CounterCodecTests: XCTestCase {
             totalWahs: nil,
             activeCount: nil,
             activeUntil: nil,
+            isMe: isMe,
+            containsMe: containsMe
+        )
+    }
+
+    private func audioEarthNode(
+        id: String,
+        kind: EarthNode.Kind,
+        activeCount: Int? = nil,
+        activeUntil: Int64?,
+        isMe: Bool = false,
+        containsMe: Bool = false
+    ) -> EarthNode {
+        EarthNode(
+            kind: kind,
+            id: id,
+            code: kind == .player ? id : nil,
+            score: kind == .player ? 1 : nil,
+            latitude: 0,
+            longitude: 0,
+            userCount: kind == .cluster ? max(activeCount ?? 0, 1) : nil,
+            totalWahs: kind == .cluster ? 1 : nil,
+            activeCount: activeCount,
+            activeUntil: activeUntil,
             isMe: isMe,
             containsMe: containsMe
         )

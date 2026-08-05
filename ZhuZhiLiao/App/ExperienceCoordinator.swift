@@ -160,7 +160,11 @@ final class ExperienceCoordinator: ObservableObject {
         pendingRenderedWahs = 0
 
         if !isRunningUnitTests {
-            updateAudio(for: frame)
+            audioEngine.update(
+                revolutionsPerSecond: frame.revolutionsPerSecond,
+                activity: frame.state.activity,
+                phase: frame.phase
+            )
         }
 
         if timestamp - lastHUDPresentationTime >= 0.12 {
@@ -218,6 +222,35 @@ final class ExperienceCoordinator: ObservableObject {
 
     func setEarthPresented(_ isPresented: Bool) {
         earthIsPresented = isPresented
+        guard !isRunningUnitTests else { return }
+        audioEngine.setEarthPresented(isPresented)
+    }
+
+    func setEarthAudioMuted(_ isMuted: Bool) {
+        guard !isRunningUnitTests else { return }
+        audioEngine.setEarthMuted(isMuted)
+    }
+
+    @discardableResult
+    func synchronizeEarthAudio(
+        nodes: [EarthNode],
+        serverClockOffsetMilliseconds: Int64,
+        now: Date = Date()
+    ) -> Date? {
+        let localNow = Int64(now.timeIntervalSince1970 * 1_000)
+        let serverNow = localNow + serverClockOffsetMilliseconds
+        let voices = EarthAudioVoicePlanner.voices(
+            nodes: nodes,
+            serverNow: serverNow,
+            serverClockOffsetMilliseconds: serverClockOffsetMilliseconds,
+            localWahAt: lastLocalWahAt
+        )
+        if !isRunningUnitTests {
+            audioEngine.updateEarthVoices(voices)
+        }
+        guard let nextExpiry = voices.map(\.activeUntil).min() else { return nil }
+        let localExpiry = nextExpiry - serverClockOffsetMilliseconds
+        return Date(timeIntervalSince1970: TimeInterval(localExpiry) / 1_000)
     }
 
     private func startSimulationLoop() {
@@ -289,9 +322,6 @@ final class ExperienceCoordinator: ObservableObject {
         latestSimulationFrame = frame
         elapsedTime += Float(clampedDeltaTime)
         pendingRenderedWahs += frame.completedWahs
-        if earthIsPresented, !isRunningUnitTests {
-            updateAudio(for: frame)
-        }
 
         if !automaticMode {
             hapticFeedback.update(with: frame)
@@ -321,14 +351,6 @@ final class ExperienceCoordinator: ObservableObject {
             return .shaking
         }
         return .idle
-    }
-
-    private func updateAudio(for frame: SimulationFrame) {
-        audioEngine.update(
-            revolutionsPerSecond: frame.revolutionsPerSecond,
-            activity: frame.state.activity,
-            phase: frame.phase
-        )
     }
 
     private func resetSimulation(gravityDirection: SIMD3<Float>) {
