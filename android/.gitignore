@@ -1,6 +1,8 @@
 .gradle/
 .kotlin/
 local.properties
+keystore.properties
+keystore/
 **/build/
 captures/
 .idea/

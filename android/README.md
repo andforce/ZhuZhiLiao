@@ -12,6 +12,16 @@ Android 客户端使用 Kotlin、传统 View 与 OpenGL ES 3.0，支持 Android 
 
 输出 APK：`app/build/outputs/apk/debug/app-debug.apk`。
 
+## 发布签名
+
+Release 构建会从本地 `keystore.properties` 读取 `storeFile`、`storePassword`、`keyAlias` 和 `keyPassword`。属性文件与 `keystore/` 目录均已被 Git 忽略，签名库不得提交或附加到公开 Release。
+
+```bash
+./gradlew assembleRelease bundleRelease
+```
+
+输出 APK 与 AAB 分别位于 `app/build/outputs/apk/release/` 和 `app/build/outputs/bundle/release/`。
+
 ## 测试
 
 ```bash
