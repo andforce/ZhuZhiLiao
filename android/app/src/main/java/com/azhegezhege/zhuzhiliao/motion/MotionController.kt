@@ -49,7 +49,7 @@ class MotionController(context: Context) : SensorEventListener {
     private var referenceAttitude: Quaternion? = null
     private var currentAttitude = Quaternion.IDENTITY
     private var currentAcceleration = Vec3.ZERO
-    private var currentGravity = Vec3(0f, -1f, 0f)
+    private var currentGravity = MotionCoordinateMapper.DEFAULT_SENSOR_GRAVITY
     private var currentRotationRate = Vec3.ZERO
     private var rawGravityMetersPerSecondSquared = Vec3.ZERO
     private var hasRawGravity = false
@@ -129,7 +129,7 @@ class MotionController(context: Context) : SensorEventListener {
         val reference = referenceAttitude ?: Quaternion.IDENTITY
         val deviceToCalibratedScene = (reference * currentAttitude.conjugate()).normalized()
         val measuredAcceleration = deviceToCalibratedScene.act(currentAcceleration)
-        val gravity = deviceToCalibratedScene.act(currentGravity)
+        val gravity = MotionCoordinateMapper.sceneGravity(currentGravity, deviceToCalibratedScene)
         val rotationRate = deviceToCalibratedScene.act(currentRotationRate)
         val timestamp = event.timestamp / 1_000_000_000.0
         sample = MotionSample(
@@ -149,7 +149,7 @@ class MotionController(context: Context) : SensorEventListener {
         referenceAttitude = null
         currentAttitude = Quaternion.IDENTITY
         currentAcceleration = Vec3.ZERO
-        currentGravity = Vec3(0f, -1f, 0f)
+        currentGravity = MotionCoordinateMapper.DEFAULT_SENSOR_GRAVITY
         currentRotationRate = Vec3.ZERO
         rawGravityMetersPerSecondSquared = Vec3.ZERO
         hasRawGravity = false
