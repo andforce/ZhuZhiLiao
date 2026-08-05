@@ -93,6 +93,7 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
     private var serverClockOffsetMilliseconds: Int64 = 0
     private var localWahAt: Date?
     private var reduceMotion = false
+    private var isAutoRotationEnabled = true
     private var yaw = EarthCameraFocus.initialAngles.yaw
     private var pitch = EarthCameraFocus.initialAngles.pitch
     private var cameraDistance: Float = 3.25
@@ -207,6 +208,7 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
         serverClockOffsetMilliseconds: Int64,
         localWahAt: Date?,
         reduceMotion: Bool,
+        isAutoRotationEnabled: Bool,
         onDetailChange: @escaping (Int) -> Void,
         onSelect: @escaping (EarthNode?) -> Void
     ) {
@@ -214,6 +216,7 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
         self.serverClockOffsetMilliseconds = serverClockOffsetMilliseconds
         self.localWahAt = localWahAt
         self.reduceMotion = reduceMotion
+        self.isAutoRotationEnabled = isAutoRotationEnabled
         self.onDetailChange = onDetailChange
         self.onSelect = onSelect
         applyInitialFocusIfNeeded(to: nodes)
@@ -234,7 +237,10 @@ final class EarthMetalRenderer: NSObject, MTKViewDelegate {
         let delta = min(max(now - lastFrameTime, 0), 0.05)
         lastFrameTime = now
         updateFocusAnimation(at: now)
-        if focusAnimation == nil, !reduceMotion, now - lastInteractionTime > 3 {
+        if focusAnimation == nil,
+           isAutoRotationEnabled,
+           !reduceMotion,
+           now - lastInteractionTime > 3 {
             yaw += Float(delta) * 0.055
         }
 

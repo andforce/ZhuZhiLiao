@@ -6,6 +6,7 @@ struct EarthMetalSurface: UIViewRepresentable {
     let serverClockOffsetMilliseconds: Int64
     let localWahAt: Date?
     let reduceMotion: Bool
+    let isAutoRotationEnabled: Bool
     let onDetailChange: (Int) -> Void
     let onSelect: (EarthNode?) -> Void
 
@@ -24,6 +25,7 @@ struct EarthMetalSurface: UIViewRepresentable {
             serverClockOffsetMilliseconds: serverClockOffsetMilliseconds,
             localWahAt: localWahAt,
             reduceMotion: reduceMotion,
+            isAutoRotationEnabled: isAutoRotationEnabled,
             onDetailChange: onDetailChange,
             onSelect: onSelect
         )
@@ -36,6 +38,7 @@ struct EarthMetalSurface: UIViewRepresentable {
             serverClockOffsetMilliseconds: serverClockOffsetMilliseconds,
             localWahAt: localWahAt,
             reduceMotion: reduceMotion,
+            isAutoRotationEnabled: isAutoRotationEnabled,
             onDetailChange: onDetailChange,
             onSelect: onSelect
         )

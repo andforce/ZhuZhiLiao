@@ -9,6 +9,7 @@ struct WahEarthView: View {
 
     @State private var model: EarthFeatureModel
     @State private var presentedSheet: EarthSheet?
+    @State private var isAutoRotationEnabled = true
 
     init(coordinator: ExperienceCoordinator, theme: SeasonTheme) {
         self.coordinator = coordinator
@@ -23,6 +24,7 @@ struct WahEarthView: View {
                 serverClockOffsetMilliseconds: model.serverClockOffsetMilliseconds,
                 localWahAt: coordinator.lastLocalWahAt,
                 reduceMotion: reduceMotion,
+                isAutoRotationEnabled: isAutoRotationEnabled,
                 onDetailChange: model.setDetail,
                 onSelect: { model.selectedNode = $0 }
             )
@@ -91,6 +93,16 @@ struct WahEarthView: View {
                 }
 
                 Spacer()
+
+                Button {
+                    isAutoRotationEnabled.toggle()
+                } label: {
+                    Image(systemName: isAutoRotationEnabled ? "pause.circle" : "play.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(isAutoRotationEnabled ? "停止地球自转" : "继续地球自转")
+                .accessibilityValue(isAutoRotationEnabled ? "正在自转" : "已停止")
 
                 if model.isParticipating {
                     Menu {
