@@ -293,6 +293,13 @@ final class ExperienceCoordinator: ObservableObject {
         latestSimulationFrame = frame
         elapsedTime += Float(clampedDeltaTime)
         pendingRenderedWahs += frame.completedWahs
+        if earthIsPresented, !isRunningUnitTests {
+            audioEngine.update(
+                revolutionsPerSecond: frame.revolutionsPerSecond,
+                activity: frame.state.activity,
+                phase: frame.phase
+            )
+        }
 
         if !automaticMode {
             hapticFeedback.update(with: frame)
