@@ -25,6 +25,8 @@ final class EarthFeatureModel {
 
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored private var detailTask: Task<Void, Never>?
+    @ObservationIgnored private var audioExpiryTask: Task<Void, Never>?
+    @ObservationIgnored private var isAudioActive = false
 
     init(
         coordinator: ExperienceCoordinator,
@@ -39,6 +41,40 @@ final class EarthFeatureModel {
         await refresh(showLoading: true)
         if isParticipating, locationService.canRefreshWithoutPrompt {
             await refreshExistingLocation()
+        }
+        synchronizeAudio()
+    }
+
+    func startAudio() {
+        isAudioActive = true
+        synchronizeAudio()
+    }
+
+    func stopAudio() {
+        isAudioActive = false
+        audioExpiryTask?.cancel()
+        audioExpiryTask = nil
+    }
+
+    func synchronizeAudio() {
+        audioExpiryTask?.cancel()
+        guard isAudioActive else {
+            audioExpiryTask = nil
+            return
+        }
+        guard let nextExpiry = coordinator.synchronizeEarthAudio(
+            nodes: nodes,
+            serverClockOffsetMilliseconds: serverClockOffsetMilliseconds
+        ) else {
+            audioExpiryTask = nil
+            return
+        }
+
+        let delay = max(nextExpiry.timeIntervalSinceNow + 0.02, 0.02)
+        audioExpiryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard let self, !Task.isCancelled else { return }
+            self.synchronizeAudio()
         }
     }
 
@@ -120,6 +156,7 @@ final class EarthFeatureModel {
                 self.selectedNode = nodes.first(where: { $0.id == selectedNode.id })
             }
             loadState = .loaded
+            synchronizeAudio()
         } catch is CancellationError {
             return
         } catch {

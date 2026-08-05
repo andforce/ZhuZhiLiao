@@ -306,7 +306,7 @@ test("publishes opt-in earth points, activity, clusters, and removal", async () 
     },
     { kind: "cluster", userCount: 1, totalWahs: 3, activeCount: 1, containsMe: true }
   );
-  assert.equal(clustered.nodes[0].activeUntil, score.lastWahAt + 120_000);
+  assert.equal(clustered.nodes[0].activeUntil, score.lastWahAt + 600_000);
 
   const removed = await fetch(`${server.httpURL}/api/players/me/earth`, {
     method: "DELETE",

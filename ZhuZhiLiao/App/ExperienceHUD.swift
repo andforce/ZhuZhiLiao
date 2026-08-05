@@ -77,7 +77,7 @@ private struct ExperienceHeader: View {
                         action: showEarth
                     )
                     .accessibilityLabel("哇声地球")
-                    .accessibilityHint("查看世界各地的哇声和两分钟共鸣波纹")
+                    .accessibilityHint("查看世界各地的哇声和十分钟共鸣波纹")
 
                     HeaderActionButton(
                         title: "排行",

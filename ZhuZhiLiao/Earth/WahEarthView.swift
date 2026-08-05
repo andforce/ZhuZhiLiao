@@ -10,6 +10,7 @@ struct WahEarthView: View {
     @State private var model: EarthFeatureModel
     @State private var presentedSheet: EarthSheet?
     @State private var isAutoRotationEnabled = true
+    @AppStorage("zzl_earth_audio_muted") private var isAudioMuted = false
 
     init(coordinator: ExperienceCoordinator, theme: SeasonTheme) {
         self.coordinator = coordinator
@@ -44,10 +45,23 @@ struct WahEarthView: View {
         .statusBarHidden(true)
         .persistentSystemOverlays(.hidden)
         .task { await model.start() }
-        .onAppear { coordinator.setEarthPresented(true) }
-        .onDisappear { coordinator.setEarthPresented(false) }
+        .onAppear {
+            coordinator.setEarthPresented(true)
+            coordinator.setEarthAudioMuted(isAudioMuted)
+            model.startAudio()
+        }
+        .onDisappear {
+            model.stopAudio()
+            coordinator.setEarthPresented(false)
+        }
         .onChange(of: coordinator.earthRevision) { _, _ in
             model.refreshForRevision()
+        }
+        .onChange(of: coordinator.lastLocalWahAt) { _, _ in
+            model.synchronizeAudio()
+        }
+        .onChange(of: isAudioMuted) { _, isMuted in
+            coordinator.setEarthAudioMuted(isMuted)
         }
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
@@ -103,6 +117,16 @@ struct WahEarthView: View {
                 }
                 .accessibilityLabel(isAutoRotationEnabled ? "停止地球自转" : "继续地球自转")
                 .accessibilityValue(isAutoRotationEnabled ? "正在自转" : "已停止")
+
+                Button {
+                    isAudioMuted.toggle()
+                } label: {
+                    Image(systemName: isAudioMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(isAudioMuted ? "开启哇声地球声音" : "静音哇声地球")
+                .accessibilityValue(isAudioMuted ? "已静音" : "声音已开启")
 
                 if model.isParticipating {
                     Menu {
@@ -171,7 +195,7 @@ struct WahEarthView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("在地球上点亮我")
                     .font(.headline)
-                Text("加入后只上传约 20 公里格网。你的每次哇声会从圆点扩散两分钟。")
+                Text("加入后只上传约 20 公里格网。你的每次哇声会从圆点扩散 10 分钟。")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.62))
                 Button {
@@ -193,7 +217,7 @@ struct WahEarthView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("摇动竹知了，让这里产生回响")
                         .font(.subheadline.weight(.semibold))
-                    Text("最后一声后的波纹会持续 2 分钟")
+                    Text("最后一声后的波纹和声音会持续 10 分钟")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.58))
                 }
