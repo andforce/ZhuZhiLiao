@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 - 2026-08-07
+
+### Refactor
+
+- Reorganize the Android and iOS projects into dedicated platform directories.
+
 ## 1.0.0 - 2026-08-05
 
 ### Features
