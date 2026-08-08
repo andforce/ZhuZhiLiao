@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00B0AA221D2704D8383A19E6 /* PlayerIdentityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 474F6607C6EF2CDDE48FCDF5 /* PlayerIdentityStore.swift */; };
 		020847E398F2A9D38A2720DB /* CounterCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B5E2E6D3523451131D6323 /* CounterCodec.swift */; };
 		17619AAA8C32B3F58CAA4125 /* CounterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD2B1A909B797795A1533BA /* CounterService.swift */; };
 		1B1DAFF096907932D0431D0A /* MetalSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69CD538AD36F4FAB0E2DE5AE /* MetalSurface.swift */; };
@@ -15,39 +16,40 @@
 		1F4F96C24625DEC9F4196702 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */; };
 		2FB859F329436C46F088E105 /* ToySimulationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2C879534D119ECFEE6D448 /* ToySimulationTests.swift */; };
 		379876F49D064C15F8F60993 /* zhuzhiliao-loop.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */; };
+		397EC02AA989F970341F3775 /* EarthBoundaryLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C79954AC29DD04502A8547A4 /* EarthBoundaryLoader.swift */; };
+		421251D66D44748F8C7D1E82 /* EarthMetalSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E94B4DF5E0D92568E6169B5 /* EarthMetalSurface.swift */; };
 		4324C25CA6E8E2988AAC1CB7 /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E210088C96B2163A7E7B033A /* MetalRenderer.swift */; };
 		444F16515F0614D1139B879A /* MatrixMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E20C0A95C70EF4DDCBD2BA0 /* MatrixMath.swift */; };
 		4736DC2D3C44B6CE7D4EC7AD /* MotionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC6C4AB2C3747172AA234C77 /* MotionController.swift */; };
 		4C1619F1DEDB2B6189743AED /* WahOutbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D357BD872CCDE095BA20310 /* WahOutbox.swift */; };
+		4F35CCAC2FEBC4E8DBF5B6AC /* SeasonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB98128E240C724680259153 /* SeasonTheme.swift */; };
 		595E619532C58851ECED417A /* RenderSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFC69EE99F7D36A13150BC17 /* RenderSnapshot.swift */; };
+		632371D48925BBA6072BFC42 /* ThemePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2009D0FB6A4CDA0A6900C54C /* ThemePickerView.swift */; };
+		69C347CD110E3737E6CA5E0E /* ne_110m_admin_0_countries.geojson in Resources */ = {isa = PBXBuildFile; fileRef = DBDDEBC063FCE340713318B6 /* ne_110m_admin_0_countries.geojson */; };
 		70623662CCC47FD67528C148 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 158E5F7EDC3D86D020823A6F /* Shaders.metal */; };
+		71F8CD560EABE42ECB338256 /* SeasonalGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55919D54FA2BE9868ED30E50 /* SeasonalGlass.swift */; };
 		7615960140B6B967D19C87A8 /* ZhuZhiLiaoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB32B89136CB0CC426F50DC /* ZhuZhiLiaoApp.swift */; };
 		85D24223A6DAB41B473ECAAE /* MotionSampleFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D81DA45CC67961FFAF50308 /* MotionSampleFilter.swift */; };
 		929AA2BD94E2EFDD87E11EA3 /* ToyAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A09BC70309ABBB5DED4F809 /* ToyAudioEngine.swift */; };
 		997BBC4085E8ADFD7D4416D7 /* MeshGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB3D9C2620F8EE2B4121D9F /* MeshGenerator.swift */; };
+		A22D481D65ECFA4BC93A79B6 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E6B6662CA887DC8F34E2F96 /* LeaderboardView.swift */; };
+		A6D8CC81CC79B47B1C44C66A /* EarthLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98FFB0CB34DC00C0D234FAC5 /* EarthLocationService.swift */; };
 		A8152964A46D4751C613073D /* CounterCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1339F89C9DB3E1244702245D /* CounterCodecTests.swift */; };
 		AB079BA4AB1E2D0FC35ADA81 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC88CB70B0B26E0E40C92A2 /* ContentView.swift */; };
+		AE5B07B6A3884EB093B25B83 /* SafetyIntroduction.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE2AB8F673051416EF80413C /* SafetyIntroduction.swift */; };
 		B40D27ABF46D1EA3F6727AE0 /* OrbitCounterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8F2FF197D0D52D002B9885 /* OrbitCounterTests.swift */; };
 		B5350D5475F7D69F242F02C8 /* OrbitCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03C667CBC2828B7A0C483668 /* OrbitCounter.swift */; };
+		BEA66C81B2E78AFBF5EE1E1D /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC739EF9579922E23C277255 /* AboutView.swift */; };
 		C36D6ABDD40E44DDBE49EC9A /* MotionSampleFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EA4F205DBB136C692D9B87C /* MotionSampleFilterTests.swift */; };
 		C879664EB9EA6773D56E99CC /* ToySimulation.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF9E4CE0A33ADC081A891C6A /* ToySimulation.swift */; };
 		C91158065EC8B647A0CCF75E /* ExperienceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF143CF9EB5830A32607B531 /* ExperienceCoordinator.swift */; };
-		D10000000000000000000001 /* ExperienceHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000001 /* ExperienceHUD.swift */; };
-		D10000000000000000000002 /* SafetyIntroduction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000002 /* SafetyIntroduction.swift */; };
-		D10000000000000000000003 /* SeasonTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000003 /* SeasonTheme.swift */; };
-		D10000000000000000000004 /* SeasonalGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000004 /* SeasonalGlass.swift */; };
-		D10000000000000000000005 /* ThemePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000005 /* ThemePickerView.swift */; };
-		D10000000000000000000006 /* SeasonThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000006 /* SeasonThemeTests.swift */; };
-		E10000000000000000000001 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000001 /* LeaderboardView.swift */; };
-		E10000000000000000000002 /* PlayerIdentityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* PlayerIdentityStore.swift */; };
-		F10000000000000000000001 /* EarthBoundaryLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* EarthBoundaryLoader.swift */; };
-		F10000000000000000000002 /* EarthFeatureModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002 /* EarthFeatureModel.swift */; };
-		F10000000000000000000003 /* EarthLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* EarthLocationService.swift */; };
-		F10000000000000000000004 /* WahEarthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004 /* WahEarthView.swift */; };
-		F10000000000000000000005 /* EarthMetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000005 /* EarthMetalRenderer.swift */; };
-		F10000000000000000000006 /* EarthMetalSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000006 /* EarthMetalSurface.swift */; };
-		F10000000000000000000007 /* ne_110m_admin_0_countries.geojson in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000007 /* ne_110m_admin_0_countries.geojson */; };
-		F10000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson */; };
+		C9CB9D7F85531A4024CA7711 /* EarthFeatureModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C14C519D59D54689EDA018E1 /* EarthFeatureModel.swift */; };
+		CD3BD289AAE7924947243A2F /* ne_110m_admin_1_states_provinces.geojson in Resources */ = {isa = PBXBuildFile; fileRef = 3D8A61DD8430C8A603FC3503 /* ne_110m_admin_1_states_provinces.geojson */; };
+		D05431FD14D08EF864F994A8 /* WahEarthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3888F755A1A7DCE0D4A2ADD4 /* WahEarthView.swift */; };
+		DE1D9C01975C6647990EDECA /* SeasonThemeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C744EA59BFA4BF86EAA05D79 /* SeasonThemeTests.swift */; };
+		F2D8245CFDBE9EECAB683B78 /* ExperienceHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1D77CC885FE618B0C073225 /* ExperienceHUD.swift */; };
+		FD5372C5EEB95E39B0B89BAD /* EarthMetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D8EB7F97ED9AD0E4DE63DE /* EarthMetalRenderer.swift */; };
+		FE382EB5E1E05FA80375B5FB /* AboutViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA2DEA8796C99B2DF5E25C3 /* AboutViewTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,44 +69,46 @@
 		158E5F7EDC3D86D020823A6F /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		18FD2201EA9E8EA1629903A1 /* ZhuZhiLiaoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ZhuZhiLiaoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1C8F2FF197D0D52D002B9885 /* OrbitCounterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitCounterTests.swift; sourceTree = "<group>"; };
+		2009D0FB6A4CDA0A6900C54C /* ThemePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePickerView.swift; sourceTree = "<group>"; };
+		26D8EB7F97ED9AD0E4DE63DE /* EarthMetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthMetalRenderer.swift; sourceTree = "<group>"; };
 		2DED67B89D9B1D94B0CBE06C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2FD2B1A909B797795A1533BA /* CounterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterService.swift; sourceTree = "<group>"; };
-		30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = "zhuzhiliao-loop.m4a"; sourceTree = "<group>"; };
+		30004BBB09AF0718710FC82A /* zhuzhiliao-loop.m4a */ = {isa = PBXFileReference; path = "zhuzhiliao-loop.m4a"; sourceTree = "<group>"; };
+		3888F755A1A7DCE0D4A2ADD4 /* WahEarthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WahEarthView.swift; sourceTree = "<group>"; };
 		3CC88CB70B0B26E0E40C92A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		3D8A61DD8430C8A603FC3503 /* ne_110m_admin_1_states_provinces.geojson */ = {isa = PBXFileReference; path = ne_110m_admin_1_states_provinces.geojson; sourceTree = "<group>"; };
 		3DB3D9C2620F8EE2B4121D9F /* MeshGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshGenerator.swift; sourceTree = "<group>"; };
 		3E20C0A95C70EF4DDCBD2BA0 /* MatrixMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixMath.swift; sourceTree = "<group>"; };
-		4DEB8088056A3D0FC6E9490C /* 赛博竹知了.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "赛博竹知了.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		474F6607C6EF2CDDE48FCDF5 /* PlayerIdentityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerIdentityStore.swift; sourceTree = "<group>"; };
 		4EA4F205DBB136C692D9B87C /* MotionSampleFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionSampleFilterTests.swift; sourceTree = "<group>"; };
+		55919D54FA2BE9868ED30E50 /* SeasonalGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonalGlass.swift; sourceTree = "<group>"; };
+		5E6B6662CA887DC8F34E2F96 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		69CD538AD36F4FAB0E2DE5AE /* MetalSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalSurface.swift; sourceTree = "<group>"; };
 		7A09BC70309ABBB5DED4F809 /* ToyAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToyAudioEngine.swift; sourceTree = "<group>"; };
 		7D81DA45CC67961FFAF50308 /* MotionSampleFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionSampleFilter.swift; sourceTree = "<group>"; };
-		8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		83DD15E3A8D117A21ADCEA90 /* 赛博竹知了.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "赛博竹知了.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		98FFB0CB34DC00C0D234FAC5 /* EarthLocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthLocationService.swift; sourceTree = "<group>"; };
 		9D357BD872CCDE095BA20310 /* WahOutbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WahOutbox.swift; sourceTree = "<group>"; };
+		9E94B4DF5E0D92568E6169B5 /* EarthMetalSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthMetalSurface.swift; sourceTree = "<group>"; };
 		A1B5E2E6D3523451131D6323 /* CounterCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterCodec.swift; sourceTree = "<group>"; };
 		AD2C879534D119ECFEE6D448 /* ToySimulationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToySimulationTests.swift; sourceTree = "<group>"; };
 		AF143CF9EB5830A32607B531 /* ExperienceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperienceCoordinator.swift; sourceTree = "<group>"; };
+		B1D77CC885FE618B0C073225 /* ExperienceHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperienceHUD.swift; sourceTree = "<group>"; };
+		C14C519D59D54689EDA018E1 /* EarthFeatureModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthFeatureModel.swift; sourceTree = "<group>"; };
+		C744EA59BFA4BF86EAA05D79 /* SeasonThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonThemeTests.swift; sourceTree = "<group>"; };
+		C79954AC29DD04502A8547A4 /* EarthBoundaryLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthBoundaryLoader.swift; sourceTree = "<group>"; };
 		CBFE12B2709D13F3D4B0B18E /* WahOutboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WahOutboxTests.swift; sourceTree = "<group>"; };
 		CF9E4CE0A33ADC081A891C6A /* ToySimulation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToySimulation.swift; sourceTree = "<group>"; };
+		DBDDEBC063FCE340713318B6 /* ne_110m_admin_0_countries.geojson */ = {isa = PBXFileReference; path = ne_110m_admin_0_countries.geojson; sourceTree = "<group>"; };
+		DC739EF9579922E23C277255 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E210088C96B2163A7E7B033A /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
+		EB98128E240C724680259153 /* SeasonTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonTheme.swift; sourceTree = "<group>"; };
 		F7B81477869B1CE66698D7BD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		FC6C4AB2C3747172AA234C77 /* MotionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionController.swift; sourceTree = "<group>"; };
+		FDA2DEA8796C99B2DF5E25C3 /* AboutViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutViewTests.swift; sourceTree = "<group>"; };
+		FE2AB8F673051416EF80413C /* SafetyIntroduction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyIntroduction.swift; sourceTree = "<group>"; };
 		FFC69EE99F7D36A13150BC17 /* RenderSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderSnapshot.swift; sourceTree = "<group>"; };
-		D20000000000000000000001 /* ExperienceHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperienceHUD.swift; sourceTree = "<group>"; };
-		D20000000000000000000002 /* SafetyIntroduction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyIntroduction.swift; sourceTree = "<group>"; };
-		D20000000000000000000003 /* SeasonTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonTheme.swift; sourceTree = "<group>"; };
-		D20000000000000000000004 /* SeasonalGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonalGlass.swift; sourceTree = "<group>"; };
-		D20000000000000000000005 /* ThemePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePickerView.swift; sourceTree = "<group>"; };
-		D20000000000000000000006 /* SeasonThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonThemeTests.swift; sourceTree = "<group>"; };
-		E20000000000000000000001 /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
-		E20000000000000000000002 /* PlayerIdentityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerIdentityStore.swift; sourceTree = "<group>"; };
-		F20000000000000000000001 /* EarthBoundaryLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthBoundaryLoader.swift; sourceTree = "<group>"; };
-		F20000000000000000000002 /* EarthFeatureModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthFeatureModel.swift; sourceTree = "<group>"; };
-		F20000000000000000000003 /* EarthLocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthLocationService.swift; sourceTree = "<group>"; };
-		F20000000000000000000004 /* WahEarthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WahEarthView.swift; sourceTree = "<group>"; };
-		F20000000000000000000005 /* EarthMetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthMetalRenderer.swift; sourceTree = "<group>"; };
-		F20000000000000000000006 /* EarthMetalSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarthMetalSurface.swift; sourceTree = "<group>"; };
-		F20000000000000000000007 /* ne_110m_admin_0_countries.geojson */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ne_110m_admin_0_countries.geojson; sourceTree = "<group>"; };
-		F20000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ne_110m_admin_1_states_provinces.geojson; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -113,16 +117,25 @@
 			children = (
 				A1B5E2E6D3523451131D6323 /* CounterCodec.swift */,
 				2FD2B1A909B797795A1533BA /* CounterService.swift */,
-				E20000000000000000000002 /* PlayerIdentityStore.swift */,
+				474F6607C6EF2CDDE48FCDF5 /* PlayerIdentityStore.swift */,
 				9D357BD872CCDE095BA20310 /* WahOutbox.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
 		};
+		2182E58B2E458CB57CDDD240 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DBDDEBC063FCE340713318B6 /* ne_110m_admin_0_countries.geojson */,
+				3D8A61DD8430C8A603FC3503 /* ne_110m_admin_1_states_provinces.geojson */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		4D7BB7552F3953C0F443A4AB /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4DEB8088056A3D0FC6E9490C /* 赛博竹知了.app */,
+				83DD15E3A8D117A21ADCEA90 /* 赛博竹知了.app */,
 				18FD2201EA9E8EA1629903A1 /* ZhuZhiLiaoTests.xctest */,
 			);
 			name = Products;
@@ -155,6 +168,18 @@
 			path = Physics;
 			sourceTree = "<group>";
 		};
+		ABE0569F6CDACB43275701AE /* Earth */ = {
+			isa = PBXGroup;
+			children = (
+				C79954AC29DD04502A8547A4 /* EarthBoundaryLoader.swift */,
+				C14C519D59D54689EDA018E1 /* EarthFeatureModel.swift */,
+				98FFB0CB34DC00C0D234FAC5 /* EarthLocationService.swift */,
+				3888F755A1A7DCE0D4A2ADD4 /* WahEarthView.swift */,
+				2182E58B2E458CB57CDDD240 /* Resources */,
+			);
+			path = Earth;
+			sourceTree = "<group>";
+		};
 		B0A70AC71037ED88F39D8CDD /* Audio */ = {
 			isa = PBXGroup;
 			children = (
@@ -166,8 +191,8 @@
 		BB1370258B8197ACFBAFC78D /* Rendering */ = {
 			isa = PBXGroup;
 			children = (
-				F20000000000000000000005 /* EarthMetalRenderer.swift */,
-				F20000000000000000000006 /* EarthMetalSurface.swift */,
+				26D8EB7F97ED9AD0E4DE63DE /* EarthMetalRenderer.swift */,
+				9E94B4DF5E0D92568E6169B5 /* EarthMetalSurface.swift */,
 				3E20C0A95C70EF4DDCBD2BA0 /* MatrixMath.swift */,
 				3DB3D9C2620F8EE2B4121D9F /* MeshGenerator.swift */,
 				E210088C96B2163A7E7B033A /* MetalRenderer.swift */,
@@ -181,10 +206,11 @@
 		CA5AE4B07AACB4AA87CA0704 /* ZhuZhiLiaoTests */ = {
 			isa = PBXGroup;
 			children = (
+				FDA2DEA8796C99B2DF5E25C3 /* AboutViewTests.swift */,
 				1339F89C9DB3E1244702245D /* CounterCodecTests.swift */,
 				4EA4F205DBB136C692D9B87C /* MotionSampleFilterTests.swift */,
 				1C8F2FF197D0D52D002B9885 /* OrbitCounterTests.swift */,
-				D20000000000000000000006 /* SeasonThemeTests.swift */,
+				C744EA59BFA4BF86EAA05D79 /* SeasonThemeTests.swift */,
 				AD2C879534D119ECFEE6D448 /* ToySimulationTests.swift */,
 				CBFE12B2709D13F3D4B0B18E /* WahOutboxTests.swift */,
 			);
@@ -207,7 +233,7 @@
 				8CC372A67362C57DE9EBB262 /* PrivacyInfo.xcprivacy */,
 				FE0BFE4C8FFE8790E89F59A7 /* App */,
 				B0A70AC71037ED88F39D8CDD /* Audio */,
-				F30000000000000000000001 /* Earth */,
+				ABE0569F6CDACB43275701AE /* Earth */,
 				5C53237516DDC89C41C65F69 /* Motion */,
 				0340383EB9EC699A99E97BDE /* Network */,
 				A050BBC6D159884B542230FE /* Physics */,
@@ -220,38 +246,18 @@
 		FE0BFE4C8FFE8790E89F59A7 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				DC739EF9579922E23C277255 /* AboutView.swift */,
 				3CC88CB70B0B26E0E40C92A2 /* ContentView.swift */,
 				AF143CF9EB5830A32607B531 /* ExperienceCoordinator.swift */,
-				D20000000000000000000001 /* ExperienceHUD.swift */,
-				E20000000000000000000001 /* LeaderboardView.swift */,
-				D20000000000000000000002 /* SafetyIntroduction.swift */,
-				D20000000000000000000003 /* SeasonTheme.swift */,
-				D20000000000000000000004 /* SeasonalGlass.swift */,
-				D20000000000000000000005 /* ThemePickerView.swift */,
+				B1D77CC885FE618B0C073225 /* ExperienceHUD.swift */,
+				5E6B6662CA887DC8F34E2F96 /* LeaderboardView.swift */,
+				FE2AB8F673051416EF80413C /* SafetyIntroduction.swift */,
+				55919D54FA2BE9868ED30E50 /* SeasonalGlass.swift */,
+				EB98128E240C724680259153 /* SeasonTheme.swift */,
+				2009D0FB6A4CDA0A6900C54C /* ThemePickerView.swift */,
 				0FB32B89136CB0CC426F50DC /* ZhuZhiLiaoApp.swift */,
 			);
 			path = App;
-			sourceTree = "<group>";
-		};
-		F30000000000000000000001 /* Earth */ = {
-			isa = PBXGroup;
-			children = (
-				F20000000000000000000001 /* EarthBoundaryLoader.swift */,
-				F20000000000000000000002 /* EarthFeatureModel.swift */,
-				F20000000000000000000003 /* EarthLocationService.swift */,
-				F20000000000000000000004 /* WahEarthView.swift */,
-				F30000000000000000000002 /* Resources */,
-			);
-			path = Earth;
-			sourceTree = "<group>";
-		};
-		F30000000000000000000002 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				F20000000000000000000007 /* ne_110m_admin_0_countries.geojson */,
-				F20000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson */,
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -272,7 +278,7 @@
 			packageProductDependencies = (
 			);
 			productName = ZhuZhiLiao;
-			productReference = 4DEB8088056A3D0FC6E9490C /* 赛博竹知了.app */;
+			productReference = 83DD15E3A8D117A21ADCEA90 /* 赛博竹知了.app */;
 			productType = "com.apple.product-type.application";
 		};
 		784DB41CFFAFA2458DD48606 /* ZhuZhiLiaoTests */ = {
@@ -301,6 +307,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					6526F7BC11298BBBDFEB8C06 = {
+						DevelopmentTeam = RH9H7T7RBU;
+					};
+				};
 			};
 			buildConfigurationList = 24385183763851B483C45BF3 /* Build configuration list for PBXProject "ZhuZhiLiao" */;
 			developmentRegion = en;
@@ -329,9 +340,9 @@
 			files = (
 				1EA01DE331DBD8ABF1443EEE /* Assets.xcassets in Resources */,
 				1F4F96C24625DEC9F4196702 /* PrivacyInfo.xcprivacy in Resources */,
+				69C347CD110E3737E6CA5E0E /* ne_110m_admin_0_countries.geojson in Resources */,
+				CD3BD289AAE7924947243A2F /* ne_110m_admin_1_states_provinces.geojson in Resources */,
 				379876F49D064C15F8F60993 /* zhuzhiliao-loop.m4a in Resources */,
-				F10000000000000000000007 /* ne_110m_admin_0_countries.geojson in Resources */,
-				F10000000000000000000008 /* ne_110m_admin_1_states_provinces.geojson in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,10 +353,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE382EB5E1E05FA80375B5FB /* AboutViewTests.swift in Sources */,
 				A8152964A46D4751C613073D /* CounterCodecTests.swift in Sources */,
 				C36D6ABDD40E44DDBE49EC9A /* MotionSampleFilterTests.swift in Sources */,
 				B40D27ABF46D1EA3F6727AE0 /* OrbitCounterTests.swift in Sources */,
-				D10000000000000000000006 /* SeasonThemeTests.swift in Sources */,
+				DE1D9C01975C6647990EDECA /* SeasonThemeTests.swift in Sources */,
 				2FB859F329436C46F088E105 /* ToySimulationTests.swift in Sources */,
 				1F1B9BAD7C897C64D47296EF /* WahOutboxTests.swift in Sources */,
 			);
@@ -355,35 +367,36 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BEA66C81B2E78AFBF5EE1E1D /* AboutView.swift in Sources */,
 				AB079BA4AB1E2D0FC35ADA81 /* ContentView.swift in Sources */,
 				020847E398F2A9D38A2720DB /* CounterCodec.swift in Sources */,
 				17619AAA8C32B3F58CAA4125 /* CounterService.swift in Sources */,
+				397EC02AA989F970341F3775 /* EarthBoundaryLoader.swift in Sources */,
+				C9CB9D7F85531A4024CA7711 /* EarthFeatureModel.swift in Sources */,
+				A6D8CC81CC79B47B1C44C66A /* EarthLocationService.swift in Sources */,
+				FD5372C5EEB95E39B0B89BAD /* EarthMetalRenderer.swift in Sources */,
+				421251D66D44748F8C7D1E82 /* EarthMetalSurface.swift in Sources */,
 				C91158065EC8B647A0CCF75E /* ExperienceCoordinator.swift in Sources */,
-				F10000000000000000000001 /* EarthBoundaryLoader.swift in Sources */,
-				F10000000000000000000002 /* EarthFeatureModel.swift in Sources */,
-				F10000000000000000000003 /* EarthLocationService.swift in Sources */,
-				F10000000000000000000005 /* EarthMetalRenderer.swift in Sources */,
-				F10000000000000000000006 /* EarthMetalSurface.swift in Sources */,
-				D10000000000000000000001 /* ExperienceHUD.swift in Sources */,
-				E10000000000000000000001 /* LeaderboardView.swift in Sources */,
+				F2D8245CFDBE9EECAB683B78 /* ExperienceHUD.swift in Sources */,
+				A22D481D65ECFA4BC93A79B6 /* LeaderboardView.swift in Sources */,
 				444F16515F0614D1139B879A /* MatrixMath.swift in Sources */,
 				997BBC4085E8ADFD7D4416D7 /* MeshGenerator.swift in Sources */,
 				4324C25CA6E8E2988AAC1CB7 /* MetalRenderer.swift in Sources */,
 				1B1DAFF096907932D0431D0A /* MetalSurface.swift in Sources */,
 				4736DC2D3C44B6CE7D4EC7AD /* MotionController.swift in Sources */,
 				85D24223A6DAB41B473ECAAE /* MotionSampleFilter.swift in Sources */,
-				E10000000000000000000002 /* PlayerIdentityStore.swift in Sources */,
 				B5350D5475F7D69F242F02C8 /* OrbitCounter.swift in Sources */,
+				00B0AA221D2704D8383A19E6 /* PlayerIdentityStore.swift in Sources */,
 				595E619532C58851ECED417A /* RenderSnapshot.swift in Sources */,
-				D10000000000000000000002 /* SafetyIntroduction.swift in Sources */,
-				D10000000000000000000003 /* SeasonTheme.swift in Sources */,
-				D10000000000000000000004 /* SeasonalGlass.swift in Sources */,
+				AE5B07B6A3884EB093B25B83 /* SafetyIntroduction.swift in Sources */,
+				4F35CCAC2FEBC4E8DBF5B6AC /* SeasonTheme.swift in Sources */,
+				71F8CD560EABE42ECB338256 /* SeasonalGlass.swift in Sources */,
 				70623662CCC47FD67528C148 /* Shaders.metal in Sources */,
-				D10000000000000000000005 /* ThemePickerView.swift in Sources */,
+				632371D48925BBA6072BFC42 /* ThemePickerView.swift in Sources */,
 				929AA2BD94E2EFDD87E11EA3 /* ToyAudioEngine.swift in Sources */,
 				C879664EB9EA6773D56E99CC /* ToySimulation.swift in Sources */,
+				D05431FD14D08EF864F994A8 /* WahEarthView.swift in Sources */,
 				4C1619F1DEDB2B6189743AED /* WahOutbox.swift in Sources */,
-				F10000000000000000000004 /* WahEarthView.swift in Sources */,
 				7615960140B6B967D19C87A8 /* ZhuZhiLiaoApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -527,7 +540,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 202608041838;
 				DEVELOPMENT_TEAM = RH9H7T7RBU;
 				INFOPLIST_FILE = ZhuZhiLiao/Info.plist;
@@ -539,7 +552,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.azhegezhege.zhuzhiliao;
 				PRODUCT_MODULE_NAME = ZhuZhiLiao;
 				PRODUCT_NAME = "赛博竹知了";
-				PROVISIONING_PROFILE_SPECIFIER = "";
+				PROVISIONING_PROFILE_SPECIFIER = "ZhuZhiLiao iPhone15pro Development";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};

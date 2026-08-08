@@ -6,6 +6,7 @@ struct ExperienceHUD: View {
     let showThemePicker: () -> Void
     let showEarth: () -> Void
     let showLeaderboard: () -> Void
+    let showAbout: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,7 +14,8 @@ struct ExperienceHUD: View {
                 theme: theme,
                 showThemePicker: showThemePicker,
                 showEarth: showEarth,
-                showLeaderboard: showLeaderboard
+                showLeaderboard: showLeaderboard,
+                showAbout: showAbout
             )
 
             Spacer(minLength: 210)
@@ -35,6 +37,7 @@ private struct ExperienceHeader: View {
     let showThemePicker: () -> Void
     let showEarth: () -> Void
     let showLeaderboard: () -> Void
+    let showAbout: () -> Void
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -87,6 +90,15 @@ private struct ExperienceHeader: View {
                     )
                     .accessibilityLabel("排行榜")
                     .accessibilityHint("查看全球累计排行榜和我的名次")
+
+                    HeaderActionButton(
+                        title: "关于",
+                        symbol: "info.circle",
+                        theme: theme,
+                        action: showAbout
+                    )
+                    .accessibilityLabel("关于赛博竹知了")
+                    .accessibilityHint("查看隐私政策、联系支持和版本信息")
             }
         }
     }

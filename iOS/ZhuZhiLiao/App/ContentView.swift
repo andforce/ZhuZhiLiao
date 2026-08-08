@@ -28,7 +28,8 @@ struct ContentView: View {
                 theme: themeStore.selectedTheme,
                 showThemePicker: showThemePicker,
                 showEarth: showEarth,
-                showLeaderboard: showLeaderboard
+                showLeaderboard: showLeaderboard,
+                showAbout: showAbout
             )
 
             if !hasSeenSafetyIntroduction {
@@ -48,6 +49,8 @@ struct ContentView: View {
                     coordinator: coordinator,
                     theme: themeStore.selectedTheme
                 )
+            case .about:
+                AboutView()
             }
         }
         .fullScreenCover(item: $presentedCover) { cover in
@@ -75,6 +78,10 @@ struct ContentView: View {
         presentedCover = .earth
     }
 
+    private func showAbout() {
+        presentedSheet = .about
+    }
+
     private func finishSafetyIntroduction() {
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) {
             hasSeenSafetyIntroduction = true
@@ -98,6 +105,7 @@ struct ContentView: View {
 private enum AppSheet: String, Identifiable {
     case themePicker
     case leaderboard
+    case about
 
     var id: String { rawValue }
 }

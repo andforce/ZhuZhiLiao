@@ -16,8 +16,11 @@ targets:
   ZhuZhiLiao:
     type: application
     platform: iOS
+    productName: 赛博竹知了
     sources:
       - path: ZhuZhiLiao
+        excludes:
+          - Earth/Resources/README.md
     info:
       path: ZhuZhiLiao/Info.plist
       properties:
