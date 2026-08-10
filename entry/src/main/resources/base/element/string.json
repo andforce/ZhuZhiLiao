@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "竹蝉模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "竹蝉"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "竹蝉"
+    },
+    {
+      "name": "reason_accelerometer",
+      "value": "用于识别摇动手机控制竹蝉"
+    },
+    {
+      "name": "reason_location",
+      "value": "用于在哇声地球上显示你的约20公里格网位置，不上传精确坐标"
+    }
+  ]
+}
