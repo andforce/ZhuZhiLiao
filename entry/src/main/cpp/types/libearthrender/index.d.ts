@@ -1,0 +1,9 @@
+export const registerCallback: (event?: object) => void;
+export const updateBoundaryData: (data: Float32Array) => void;
+export const updateGridData: (data: Float32Array) => void;
+export const updateNodes: (data: Float32Array) => void;
+export const setAutoRotate: (enabled: boolean) => void;
+export const setCameraDistance: (distance: number) => void;
+export const setMeJoined: (joined: boolean) => void;
+export const setMeCode: (code: string) => void;
+export const cleanup: () => void;
